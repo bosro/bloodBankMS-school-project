@@ -35,34 +35,34 @@ class ModernCalendar(ttk.Frame):
         nav_frame = ttk.Frame(header_frame, style='Card.TFrame')
         nav_frame.pack(fill='x')
 
-        # Previous month button
-        self.prev_btn = ttk.Label(
+        # Previous month button - Use tk.Label instead of ttk.Label
+        self.prev_btn = tk.Label(
             nav_frame,
             text="◀",
-            background=self.colors['card_bg'],
-            foreground=self.colors['accent'],
+            bg=self.colors['card_bg'],
+            fg=self.colors['accent'],
             font=('Segoe UI', 10),
             cursor="hand2"
         )
         self.prev_btn.pack(side='left', padx=10)
         self.prev_btn.bind('<Button-1>', lambda e: self.change_month(-1))
 
-        # Month and year label
-        self.header_label = ttk.Label(
+        # Month and year label - Use tk.Label
+        self.header_label = tk.Label(
             nav_frame,
             text=self.selected_date.strftime("%B %Y"),
-            background=self.colors['card_bg'],
-            foreground=self.colors['text'],
+            bg=self.colors['card_bg'],
+            fg=self.colors['text'],
             font=('Segoe UI', 12, 'bold')
         )
         self.header_label.pack(side='left', expand=True)
 
-        # Next month button
-        self.next_btn = ttk.Label(
+        # Next month button - Use tk.Label
+        self.next_btn = tk.Label(
             nav_frame,
             text="▶",
-            background=self.colors['card_bg'],
-            foreground=self.colors['accent'],
+            bg=self.colors['card_bg'],
+            fg=self.colors['accent'],
             font=('Segoe UI', 10),
             cursor="hand2"
         )
@@ -74,11 +74,12 @@ class ModernCalendar(ttk.Frame):
         days_frame.pack(fill='x', pady=5)
 
         for i, day in enumerate(['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']):
-            ttk.Label(
+            # Use tk.Label
+            tk.Label(
                 days_frame,
                 text=day,
-                background=self.colors['card_bg'],
-                foreground=self.colors['text_secondary'],
+                bg=self.colors['card_bg'],
+                fg=self.colors['text_secondary'],
                 font=('Segoe UI', 10)
             ).grid(row=0, column=i, pady=5)
 
@@ -89,78 +90,80 @@ class ModernCalendar(ttk.Frame):
         self.update_calendar()
 
     def update_calendar(self):
-        # Clear existing calendar
-        for widget in self.calendar_frame.winfo_children():
-            widget.destroy()
+            # Clear existing calendar
+            for widget in self.calendar_frame.winfo_children():
+                widget.destroy()
 
-        # Update header
-        self.header_label.configure(text=self.selected_date.strftime("%B %Y"))
+            # Update header
+            self.header_label.configure(text=self.selected_date.strftime("%B %Y"))
 
-        # Get calendar information
-        year = self.selected_date.year
-        month = self.selected_date.month
+            # Get calendar information
+            year = self.selected_date.year
+            month = self.selected_date.month
 
-        # Get first day of month and number of days
-        first_day = date(year, month, 1)
-        if month == 12:
-            last_day = date(year + 1, 1, 1) - timedelta(days=1)
-        else:
-            last_day = date(year, month + 1, 1) - timedelta(days=1)
-        
-        num_days = last_day.day
-        start_day = first_day.weekday()
-        start_day = (start_day + 1) % 7  # Adjust to start on Sunday
+            # Get first day of month and number of days
+            first_day = date(year, month, 1)
+            if month == 12:
+                last_day = date(year + 1, 1, 1) - timedelta(days=1)
+            else:
+                last_day = date(year, month + 1, 1) - timedelta(days=1)
+            
+            num_days = last_day.day
+            start_day = first_day.weekday()
+            start_day = (start_day + 1) % 7  # Adjust to start on Sunday
 
-        # Create calendar grid
-        day = 1
-        for week in range(6):
-            for weekday in range(7):
-                if week == 0 and weekday < start_day:
-                    # Empty cells before start of month
-                    continue
-                elif day > num_days:
-                    # Empty cells after end of month
-                    break
-                
-                current_date = date(year, month, day)
-                
-                # Create date button
-                date_frame = ttk.Frame(
-                    self.calendar_frame,
-                    style='Card.TFrame'
-                )
-                date_frame.grid(row=week, column=weekday, padx=1, pady=1, sticky='nsew')
+            # Create calendar grid
+            day = 1
+            for week in range(6):
+                for weekday in range(7):
+                    if week == 0 and weekday < start_day:
+                        # Empty cells before start of month
+                        continue
+                    elif day > num_days:
+                        # Empty cells after end of month
+                        break
+                    
+                    current_date = date(year, month, day)
+                    
+                    # Create date button
+                    date_frame = ttk.Frame(
+                        self.calendar_frame,
+                        style='Card.TFrame'
+                    )
+                    date_frame.grid(row=week, column=weekday, padx=1, pady=1, sticky='nsew')
 
-                # Style based on selection/today
-                is_selected = current_date == self.selected_date
-                is_today = current_date == date.today()
+                    # Style based on selection/today
+                    is_selected = current_date == self.selected_date
+                    is_today = current_date == date.today()
 
-                bg_color = self.colors['accent'] if is_selected else (
-                    self.colors['bg_light'] if is_today else self.colors['card_bg']
-                )
-                fg_color = self.colors['text'] if is_selected else (
-                    self.colors['accent'] if is_today else self.colors['text']
-                )
+                    bg_color = self.colors['accent'] if is_selected else (
+                        self.colors['bg_light'] if is_today else self.colors['card_bg']
+                    )
+                    fg_color = self.colors['text'] if is_selected else (
+                        self.colors['accent'] if is_today else self.colors['text']
+                    )
 
-                date_label = ttk.Label(
-                    date_frame,
-                    text=str(day),
-                    background=bg_color,
-                    foreground=fg_color,
-                    font=('Segoe UI', 10),
-                    padding=5,
-                    cursor="hand2"
-                )
-                date_label.pack(fill='both', expand=True)
-                date_label.bind('<Button-1>', lambda e, d=current_date: self.select_date(d))
-                
-                day += 1
+                    # Use tk.Label instead of ttk.Label
+                    date_label = tk.Label(
+                        date_frame,
+                        text=str(day),
+                        bg=bg_color,
+                        fg=fg_color,
+                        font=('Segoe UI', 10),
+                        padx=5,
+                        pady=5,
+                        cursor="hand2"
+                    )
+                    date_label.pack(fill='both', expand=True)
+                    date_label.bind('<Button-1>', lambda e, d=current_date: self.select_date(d))
+                    
+                    day += 1
 
-        # Configure grid weights
-        for i in range(7):
-            self.calendar_frame.grid_columnconfigure(i, weight=1)
-        for i in range(6):
-            self.calendar_frame.grid_rowconfigure(i, weight=1)
+            # Configure grid weights
+            for i in range(7):
+                self.calendar_frame.grid_columnconfigure(i, weight=1)
+            for i in range(6):
+                self.calendar_frame.grid_rowconfigure(i, weight=1)
 
     def change_month(self, delta):
         year = self.selected_date.year
@@ -184,7 +187,7 @@ class ModernCalendar(ttk.Frame):
                 self.selected_date = date(year, month + 1, 1) - timedelta(days=1)
 
         self.update_calendar()
-
+        
     def select_date(self, selected_date):
         self.selected_date = selected_date
         self.update_calendar()
@@ -224,6 +227,9 @@ class ModernBloodBankSystem:
             'border': '#404040'
         }
         
+        # Set root background
+        self.root.configure(bg=self.colors['bg_dark'])
+        
         # Apply modern theme
         self.style = ttkthemes.ThemedStyle(self.root)
         self.style.set_theme("equilux")
@@ -241,83 +247,52 @@ class ModernBloodBankSystem:
         
         # Initialize login screen
         self.show_login_screen()
-
+        
     def configure_custom_styles(self):
         # Modern frame styles
-        self.style.configure('Modern.TFrame', 
-                           background=self.colors['bg_dark'])
-        
-        self.style.configure('Card.TFrame', 
-                           background=self.colors['card_bg'],
-                           relief='flat')
-        
-        self.style.configure('DateEntry',
-                            fieldbackground=self.colors['bg_light'],
-                            selectbackground=self.colors['accent'],
-                            arrowcolor=self.colors['text'])
+        self.style.configure('Modern.TFrame')
+        self.style.configure('Card.TFrame')
+        self.style.configure('DateEntry')
 
         # Modern button styles
         self.style.configure('Modern.TButton',
-                           background=self.colors['accent'],
-                           foreground=self.colors['text'],
                            padding=(30, 15),
-                           font=('Segoe UI', 11),
-                           borderwidth=0)
+                           font=('Segoe UI', 11))
         
-        self.style.map('Modern.TButton',
-                      background=[('active', self.colors['accent_hover'])])
+        self.style.map('Modern.TButton')
         
         # Secondary button style
         self.style.configure('Secondary.TButton',
-                           background=self.colors['bg_light'],
-                           foreground=self.colors['text'],
                            padding=(30, 15),
-                           font=('Segoe UI', 11),
-                           borderwidth=0)
+                           font=('Segoe UI', 11))
         
         # Header styles
         self.style.configure('Header.TLabel',
-                           background=self.colors['bg_dark'],
-                           foreground=self.colors['text'],
                            font=('Segoe UI', 32, 'bold'),
                            padding=(0, 20))
         
         self.style.configure('Subheader.TLabel',
-                           background=self.colors['bg_dark'],
-                           foreground=self.colors['text_secondary'],
                            font=('Segoe UI', 16),
                            padding=(0, 10))
         
         # Card header style
         self.style.configure('CardHeader.TLabel',
-                           background=self.colors['card_bg'],
-                           foreground=self.colors['text'],
                            font=('Segoe UI', 18, 'bold'),
                            padding=(20, 10))
         
         # Modern entry style
         self.style.configure('Modern.TEntry',
-                           fieldbackground=self.colors['bg_light'],
-                           foreground=self.colors['text'],
                            padding=(15, 10))
         
         # Treeview styling
         self.style.configure('Treeview',
-                           background=self.colors['bg_light'],
-                           foreground=self.colors['text'],
-                           fieldbackground=self.colors['bg_light'],
                            borderwidth=0)
         
         self.style.configure('Treeview.Heading',
-                           background=self.colors['bg_dark'],
-                           foreground=self.colors['text'],
                            padding=(10, 5))
         
         # Combobox styling
-        self.style.configure('TCombobox',
-                           background=self.colors['bg_light'],
-                           foreground=self.colors['text'],
-                           selectbackground=self.colors['accent'])
+        self.style.configure('TCombobox')
 
     def init_database(self):
         try:
@@ -334,76 +309,77 @@ class ModernBloodBankSystem:
             self.root.quit()
 
     def create_tables(self):
-        tables = [
-            """CREATE TABLE IF NOT EXISTS BloodBank (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                blood_group VARCHAR(5) NOT NULL,
-                units_available INT NOT NULL,
-                last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-            )""",
-            """CREATE TABLE IF NOT EXISTS Donors (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                name VARCHAR(100) NOT NULL,
-                age INT NOT NULL,
-                blood_group VARCHAR(5) NOT NULL,
-                contact_info VARCHAR(100) NOT NULL,
-                email VARCHAR(100),
-                address TEXT,
-                donation_date DATE NOT NULL,
-                health_status TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )""",
-            """CREATE TABLE IF NOT EXISTS Requests (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                hospital_name VARCHAR(100) NOT NULL,
-                blood_group VARCHAR(5) NOT NULL,
-                units_requested INT NOT NULL,
-                request_date DATE NOT NULL,
-                priority ENUM('Normal', 'Urgent', 'Emergency') DEFAULT 'Normal',
-                status ENUM('Pending', 'Approved', 'Rejected') DEFAULT 'Pending',
-                notes TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )""",
-            """CREATE TABLE IF NOT EXISTS Users (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                username VARCHAR(50) UNIQUE NOT NULL,
-                password VARCHAR(255) NOT NULL,
-                role ENUM('admin', 'staff') NOT NULL,
-                email VARCHAR(100),
-                last_login TIMESTAMP,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )""",
-            """CREATE TABLE IF NOT EXISTS DonationSchedule (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                donor_id INT,
-                scheduled_date DATE NOT NULL,
-                time_slot VARCHAR(20) NOT NULL,
-                status ENUM('Scheduled', 'Completed', 'Cancelled') DEFAULT 'Scheduled',
-                notes TEXT,
-                FOREIGN KEY (donor_id) REFERENCES Donors(id)
-            )""",
-            """CREATE TABLE IF NOT EXISTS Inventory_Alerts (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                blood_group VARCHAR(5) NOT NULL,
-                alert_type ENUM('Low', 'Critical') NOT NULL,
-                message TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )"""
-        ]
+            tables = [
+                """CREATE TABLE IF NOT EXISTS BloodBank (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    blood_group VARCHAR(5) NOT NULL,
+                    units_available INT NOT NULL,
+                    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                )""",
+                """CREATE TABLE IF NOT EXISTS Donors (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    name VARCHAR(100) NOT NULL,
+                    age INT NOT NULL,
+                    blood_group VARCHAR(5) NOT NULL,
+                    contact_info VARCHAR(100) NOT NULL,
+                    email VARCHAR(100),
+                    address TEXT,
+                    donation_date DATE NOT NULL,
+                    health_status TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )""",
+                """CREATE TABLE IF NOT EXISTS Requests (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    hospital_name VARCHAR(100) NOT NULL,
+                    blood_group VARCHAR(5) NOT NULL,
+                    units_requested INT NOT NULL,
+                    request_date DATE NOT NULL,
+                    priority ENUM('Normal', 'Urgent', 'Emergency') DEFAULT 'Normal',
+                    status ENUM('Pending', 'Approved', 'Rejected') DEFAULT 'Pending',
+                    notes TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )""",
+                """CREATE TABLE IF NOT EXISTS Users (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    username VARCHAR(50) UNIQUE NOT NULL,
+                    password VARCHAR(255) NOT NULL,
+                    role ENUM('admin', 'staff') NOT NULL,
+                    email VARCHAR(100),
+                    last_login TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )""",
+                """CREATE TABLE IF NOT EXISTS DonationSchedule (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    donor_id INT,
+                    scheduled_date DATE NOT NULL,
+                    time_slot VARCHAR(20) NOT NULL,
+                    status ENUM('Scheduled', 'Completed', 'Cancelled') DEFAULT 'Scheduled',
+                    notes TEXT,
+                    FOREIGN KEY (donor_id) REFERENCES Donors(id)
+                )""",
+                """CREATE TABLE IF NOT EXISTS Inventory_Alerts (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    blood_group VARCHAR(5) NOT NULL,
+                    alert_type ENUM('Low', 'Critical') NOT NULL,
+                    message TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )"""
+            ]
+            
+            for table in tables:
+                self.cursor.execute(table)
+            
+            # Initialize blood bank data if empty
+            self.cursor.execute("SELECT COUNT(*) FROM BloodBank")
+            if self.cursor.fetchone()[0] == 0:
+                self.cursor.execute("""
+                    INSERT INTO BloodBank (blood_group, units_available) VALUES 
+                    ('A+', 0), ('A-', 0), ('B+', 0), ('B-', 0),
+                    ('AB+', 0), ('AB-', 0), ('O+', 0), ('O-', 0)
+                """)
+            
+            self.db.commit()
         
-        for table in tables:
-            self.cursor.execute(table)
-        
-        # Initialize blood bank data if empty
-        self.cursor.execute("SELECT COUNT(*) FROM BloodBank")
-        if self.cursor.fetchone()[0] == 0:
-            self.cursor.execute("""
-                INSERT INTO BloodBank (blood_group, units_available) VALUES 
-                ('A+', 0), ('A-', 0), ('B+', 0), ('B-', 0),
-                ('AB+', 0), ('AB-', 0), ('O+', 0), ('O-', 0)
-            """)
-        
-        self.db.commit()
     def setup_admin(self):
         try:
             # Check if admin exists
@@ -427,27 +403,35 @@ class ModernBloodBankSystem:
         login_frame = ttk.Frame(self.main_container, style='Card.TFrame')
         login_frame.place(relx=0.5, rely=0.5, anchor='center')
         
-        # Modern logo/header
-        logo_label = ttk.Label(
+        # Modern logo/header - Use tk.Label
+        logo_label = tk.Label(
             login_frame,
             text="🩸",  # Blood drop emoji
             font=('Segoe UI', 48),
-            background=self.colors['card_bg'],
-            foreground=self.colors['accent']
+            bg=self.colors['card_bg'],
+            fg=self.colors['accent']
         )
         logo_label.pack(pady=(40, 0))
         
-        title = ttk.Label(
+        # Use tk.Label
+        title = tk.Label(
             login_frame,
             text="Blood Bank",
-            style='Header.TLabel'
+            font=('Segoe UI', 32, 'bold'),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text'],
+            pady=20
         )
         title.pack(pady=(0, 10))
         
-        subtitle = ttk.Label(
+        # Use tk.Label
+        subtitle = tk.Label(
             login_frame,
             text="Management System",
-            style='Subheader.TLabel'
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
         )
         subtitle.pack(pady=(0, 40))
         
@@ -459,12 +443,13 @@ class ModernBloodBankSystem:
         username_frame = ttk.Frame(form_frame, style='Card.TFrame')
         username_frame.pack(fill='x', pady=(0, 20))
         
-        username_icon = ttk.Label(
+        # Use tk.Label
+        username_icon = tk.Label(
             username_frame,
             text="👤",  # User icon
             font=('Segoe UI', 16),
-            background=self.colors['card_bg'],
-            foreground=self.colors['text_secondary']
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary']
         )
         username_icon.pack(side='left', padx=(0, 10))
         
@@ -483,12 +468,13 @@ class ModernBloodBankSystem:
         password_frame = ttk.Frame(form_frame, style='Card.TFrame')
         password_frame.pack(fill='x', pady=(0, 30))
         
-        password_icon = ttk.Label(
+        # Use tk.Label
+        password_icon = tk.Label(
             password_frame,
             text="🔒",  # Lock icon
             font=('Segoe UI', 16),
-            background=self.colors['card_bg'],
-            foreground=self.colors['text_secondary']
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary']
         )
         password_icon.pack(side='left', padx=(0, 10))
         
@@ -501,25 +487,25 @@ class ModernBloodBankSystem:
         )
         password_entry.pack(side='left', fill='x', expand=True)
         
-        # Show/Hide password toggle
+        # Show/Hide password toggle - Use tk.Label
         self.password_visible = False
-        toggle_btn = ttk.Label(
+        toggle_btn = tk.Label(
             password_frame,
             text="👁️",  # Eye icon
             font=('Segoe UI', 16),
-            background=self.colors['card_bg'],
-            foreground=self.colors['text_secondary'],
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
             cursor="hand2"
         )
         toggle_btn.pack(side='right', padx=(10, 0))
         toggle_btn.bind('<Button-1>', lambda e: self.toggle_password_visibility(password_entry, toggle_btn))
         
-        # Error message label (hidden by default)
-        self.error_label = ttk.Label(
+        # Error message label (hidden by default) - Use tk.Label
+        self.error_label = tk.Label(
             form_frame,
             text="",
-            foreground=self.colors['error'],
-            background=self.colors['card_bg'],
+            fg=self.colors['error'],
+            bg=self.colors['card_bg'],
             font=('Segoe UI', 10)
         )
         self.error_label.pack(pady=(0, 10))
@@ -537,16 +523,17 @@ class ModernBloodBankSystem:
         login_button.pack(fill='x', pady=(0, 20))
         
         # Divider
-        divider_frame = ttk.Frame(form_frame, height=1, style='Card.TFrame')
-        divider_frame.pack(fill='x', pady=20)
-        divider_frame.configure(background=self.colors['border'])
-        
-        # Forgot password link
-        forgot_password = ttk.Label(
+        # divider_frame = ttk.Frame(form_frame, height=1, style='Card.TFrame')
+        # divider_frame.pack(fill='x', pady=20)
+        # divider_frame.configure(background=self.colors['border'])
+        divider_frame = tk.Frame(form_frame, height=1, bg=self.colors['border'])
+        divider_frame.pack(fill='x', pady=20)   
+        # Forgot password link - Use tk.Label
+        forgot_password = tk.Label(
             form_frame,
             text="Forgot Password?",
-            foreground=self.colors['accent'],
-            background=self.colors['card_bg'],
+            fg=self.colors['accent'],
+            bg=self.colors['card_bg'],
             font=('Segoe UI', 10, 'underline'),
             cursor="hand2"
         )
@@ -652,38 +639,43 @@ class ModernBloodBankSystem:
         self.show_blood_inventory(content_frame)
 
     def create_user_profile(self, parent):
-        profile_frame = ttk.Frame(parent, style='Card.TFrame')
-        profile_frame.pack(fill='x', pady=(0, 20), padx=20)
-        
-        # User avatar
-        ttk.Label(
-            profile_frame,
-            text="👤",  # User icon
-            font=('Segoe UI', 32),
-            background=self.colors['card_bg'],
-            foreground=self.colors['text']
-        ).pack(pady=(20, 10))
-        
-        # Username
-        ttk.Label(
-            profile_frame,
-            text=self.current_user['username'],
-            style='Subheader.TLabel'
-        ).pack(pady=(0, 5))
-        
-        # Role badge
-        role_frame = ttk.Frame(profile_frame, style='Card.TFrame')
-        role_frame.pack(pady=(0, 20))
-        
-        role_label = ttk.Label(
-            role_frame,
-            text=f"🔰 {self.current_user['role'].title()}",
-            background=self.colors['accent'],
-            foreground=self.colors['text'],
-            font=('Segoe UI', 10),
-            padding=(10, 5)
-        )
-        role_label.pack()
+            profile_frame = ttk.Frame(parent, style='Card.TFrame')
+            profile_frame.pack(fill='x', pady=(0, 20), padx=20)
+            
+            # User avatar - Use tk.Label
+            tk.Label(
+                profile_frame,
+                text="👤",  # User icon
+                font=('Segoe UI', 32),
+                bg=self.colors['card_bg'],
+                fg=self.colors['text']
+            ).pack(pady=(20, 10))
+            
+            # Username - Use tk.Label
+            tk.Label(
+                profile_frame,
+                text=self.current_user['username'],
+                font=('Segoe UI', 16),
+                bg=self.colors['card_bg'],
+                fg=self.colors['text_secondary'],
+                pady=10
+            ).pack(pady=(0, 5))
+            
+            # Role badge
+            role_frame = ttk.Frame(profile_frame, style='Card.TFrame')
+            role_frame.pack(pady=(0, 20))
+            
+            # Use tk.Label
+            role_label = tk.Label(
+                role_frame,
+                text=f"🔰 {self.current_user['role'].title()}",
+                bg=self.colors['accent'],
+                fg=self.colors['text'],
+                font=('Segoe UI', 10),
+                padx=10,
+                pady=5
+            )
+            role_label.pack()
 
     def create_navigation_menu(self, parent):
         nav_buttons = [
@@ -716,11 +708,14 @@ class ModernBloodBankSystem:
         header_frame = ttk.Frame(parent, style='Modern.TFrame')
         header_frame.pack(fill='x', pady=(0, 20))
         
-        # Welcome message
-        ttk.Label(
+        # Welcome message - Use tk.Label
+        tk.Label(
             header_frame,
             text=f"Welcome back, {self.current_user['username']}!",
-            style='Header.TLabel'
+            font=('Segoe UI', 32, 'bold'),
+            bg=self.colors['bg_dark'],
+            fg=self.colors['text'],
+            pady=20
         ).pack(side='left')
         
         # Date and time
@@ -728,10 +723,15 @@ class ModernBloodBankSystem:
         time_frame.pack(side='right')
         
         current_time = datetime.now().strftime("%d %B %Y, %H:%M")
-        ttk.Label(
+        
+        # Use tk.Label
+        tk.Label(
             time_frame,
             text=f"🕒 {current_time}",
-            style='Subheader.TLabel'
+            font=('Segoe UI', 16),
+            bg=self.colors['bg_dark'],
+            fg=self.colors['text_secondary'],
+            pady=10
         ).pack()
 
     def create_quick_stats(self, parent):
@@ -760,31 +760,31 @@ class ModernBloodBankSystem:
             card = ttk.Frame(stats_frame, style='Card.TFrame')
             card.grid(row=0, column=i, padx=10, sticky='nsew')
             
-            # Icon
-            ttk.Label(
+            # Icon - Use tk.Label
+            tk.Label(
                 card,
                 text=icon,
                 font=('Segoe UI', 24),
-                foreground=color,
-                background=self.colors['card_bg']
+                fg=color,
+                bg=self.colors['card_bg']
             ).pack(pady=(20, 5))
             
-            # Value
-            ttk.Label(
+            # Value - Use tk.Label
+            tk.Label(
                 card,
                 text=str(value),
                 font=('Segoe UI', 36, 'bold'),
-                foreground=self.colors['text'],
-                background=self.colors['card_bg']
+                fg=self.colors['text'],
+                bg=self.colors['card_bg']
             ).pack()
             
-            # Label
-            ttk.Label(
+            # Label - Use tk.Label
+            tk.Label(
                 card,
                 text=label,
                 font=('Segoe UI', 12),
-                foreground=self.colors['text_secondary'],
-                background=self.colors['card_bg']
+                fg=self.colors['text_secondary'],
+                bg=self.colors['card_bg']
             ).pack(pady=(5, 20))
         
         # Configure grid weights
@@ -796,13 +796,15 @@ class ModernBloodBankSystem:
             tooltip.wm_overrideredirect(True)
             tooltip.wm_geometry(f"+{event.x_root+10}+{event.y_root+10}")
             
-            label = ttk.Label(
+            # Use tk.Label instead of ttk.Label
+            label = tk.Label(
                 tooltip,
                 text=text,
-                background=self.colors['bg_dark'],
-                foreground=self.colors['text'],
+                bg=self.colors['bg_dark'],
+                fg=self.colors['text'],
                 font=('Segoe UI', 9),
-                padding=(10, 5)
+                padx=10,
+                pady=5
             )
             label.pack()
             
@@ -822,10 +824,14 @@ class ModernBloodBankSystem:
         header_frame = ttk.Frame(inventory_frame, style='Modern.TFrame')
         header_frame.pack(fill='x', pady=(0, 20))
         
-        ttk.Label(
+        # Use tk.Label
+        tk.Label(
             header_frame,
             text="Blood Inventory",
-            style='Header.TLabel'
+            font=('Segoe UI', 32, 'bold'),
+            bg=self.colors['bg_dark'],
+            fg=self.colors['text'],
+            pady=20
         ).pack(side='left')
         
         # Refresh button
@@ -859,30 +865,31 @@ class ModernBloodBankSystem:
         )
         units = self.cursor.fetchone()[0]
         
-        # Blood type label
-        ttk.Label(
+        # Blood type label - Use tk.Label
+        tk.Label(
             card,
             text=blood_type,
             font=('Segoe UI', 24, 'bold'),
-            foreground=self.colors['accent'],
-            background=self.colors['card_bg']
+            fg=self.colors['accent'],
+            bg=self.colors['card_bg']
         ).pack(pady=(20, 10))
         
-        # Units display
-        ttk.Label(
+        # Units display - Use tk.Label
+        tk.Label(
             card,
             text=str(units),
             font=('Segoe UI', 36, 'bold'),
-            foreground=self.colors['text'],
-            background=self.colors['card_bg']
+            fg=self.colors['text'],
+            bg=self.colors['card_bg']
         ).pack()
         
-        ttk.Label(
+        # Use tk.Label
+        tk.Label(
             card,
             text="units available",
             font=('Segoe UI', 10),
-            foreground=self.colors['text_secondary'],
-            background=self.colors['card_bg']
+            fg=self.colors['text_secondary'],
+            bg=self.colors['card_bg']
         ).pack(pady=(0, 20))
         
         # Status indicator
@@ -892,13 +899,15 @@ class ModernBloodBankSystem:
         status_color = self.get_status_color(units)
         status_text = self.get_status_text(units)
         
-        ttk.Label(
+        # Use tk.Label
+        tk.Label(
             status_frame,
             text=status_text,
-            background=status_color,
-            foreground=self.colors['text'],
+            bg=status_color,
+            fg=self.colors['text'],
             font=('Segoe UI', 10),
-            padding=(10, 5)
+            padx=10,
+            pady=5
         ).pack()
         
         # Action buttons
@@ -955,10 +964,14 @@ class ModernBloodBankSystem:
         header_frame = ttk.Frame(main_frame, style='Modern.TFrame')
         header_frame.pack(fill='x', pady=(0, 30))
         
-        ttk.Label(
+        # Use tk.Label instead of ttk.Label
+        tk.Label(
             header_frame,
             text="🩸 New Donor Registration",
-            style='Header.TLabel'
+            font=('Segoe UI', 32, 'bold'),
+            bg=self.colors['bg_dark'],
+            fg=self.colors['text'],
+            pady=20
         ).pack(side='left')
         
         # Create notebook for tabbed interface
@@ -1002,10 +1015,10 @@ class ModernBloodBankSystem:
         frame = ttk.Frame(parent, style='Card.TFrame')
         frame.pack(fill='both', expand=True, padx=20, pady=20)
         
-        # Create scrollable canvas
+        # Create scrollable canvas - Change background to bg
         canvas = tk.Canvas(
             frame,
-            background=self.colors['card_bg'],
+            bg=self.colors['card_bg'],
             highlightthickness=0
         )
         scrollbar = ttk.Scrollbar(frame, orient="vertical", command=canvas.yview)
@@ -1037,10 +1050,14 @@ class ModernBloodBankSystem:
             field_frame = ttk.Frame(scrollable_frame, style='Card.TFrame')
             field_frame.pack(fill='x', pady=10)
             
-            ttk.Label(
+            # Use tk.Label
+            tk.Label(
                 field_frame,
                 text=label_text,
-                style='Subheader.TLabel'
+                font=('Segoe UI', 16),
+                bg=self.colors['card_bg'],
+                fg=self.colors['text_secondary'],
+                pady=10
             ).pack(anchor='w')
             
             if field_type == "combo":
@@ -1090,10 +1107,14 @@ class ModernBloodBankSystem:
             var = tk.BooleanVar()
             self.health_vars[key] = var
             
-            ttk.Label(
+            # Use tk.Label
+            tk.Label(
                 question_frame,
                 text=question,
-                style='Subheader.TLabel'
+                font=('Segoe UI', 16),
+                bg=self.colors['card_bg'],
+                fg=self.colors['text_secondary'],
+                pady=5
             ).pack(side='left', pady=5)
             
             ttk.Checkbutton(
@@ -1104,18 +1125,25 @@ class ModernBloodBankSystem:
             
             # Add separator
             if i < len(questions) - 1:
-                separator = ttk.Frame(frame, height=1, style='Card.TFrame')
+                # separator = ttk.Frame(frame, height=1, style='Card.TFrame')
+                # separator.pack(fill='x', padx=20)
+                # separator.configure(background=self.colors['border'])
+                separator = tk.Frame(frame, height=1, bg=self.colors['border'])
                 separator.pack(fill='x', padx=20)
-                separator.configure(background=self.colors['border'])
-        
+
+
         # Additional health notes
         notes_frame = ttk.Frame(frame, style='Card.TFrame')
         notes_frame.pack(fill='x', padx=20, pady=20)
         
-        ttk.Label(
+        # Use tk.Label
+        tk.Label(
             notes_frame,
             text="Additional Health Notes",
-            style='Subheader.TLabel'
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
         ).pack(anchor='w')
         
         self.health_notes = tk.Text(
@@ -1130,6 +1158,7 @@ class ModernBloodBankSystem:
         
         return frame
 
+
     def create_scheduling_tab(self, parent):
         frame = ttk.Frame(parent, style='Card.TFrame')
         
@@ -1137,10 +1166,14 @@ class ModernBloodBankSystem:
         date_frame = ttk.Frame(frame, style='Card.TFrame')
         date_frame.pack(fill='x', padx=20, pady=20)
         
-        ttk.Label(
+        # Use tk.Label
+        tk.Label(
             date_frame,
             text="Preferred Donation Date",
-            style='Subheader.TLabel'
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
         ).pack(anchor='w')
         
         # Replace DateEntry with ModernCalendar
@@ -1152,935 +1185,1067 @@ class ModernBloodBankSystem:
             self.colors
         )
         self.date_entry.pack(fill='x')
+        
+        # Time slot selection
+        time_frame = ttk.Frame(frame, style='Card.TFrame')
+        time_frame.pack(fill='x', padx=20, pady=20)
+        
+        # Use tk.Label
+        tk.Label(
+            time_frame,
+            text="Preferred Time Slot",
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
+        ).pack(anchor='w')
+        
+        # Time slots
+        slots = ['Morning (9AM-12PM)', 'Afternoon (1PM-4PM)', 'Evening (5PM-8PM)']
+        self.time_var = tk.StringVar()
+        
+        for slot in slots:
+            ttk.Radiobutton(
+                time_frame,
+                text=slot,
+                variable=self.time_var,
+                value=slot,
+                style='Modern.TRadiobutton'
+            ).pack(anchor='w', pady=5)
+        
+        # Additional notes
+        notes_frame = ttk.Frame(frame, style='Card.TFrame')
+        notes_frame.pack(fill='x', padx=20, pady=20)
+        
+        # Use tk.Label
+        tk.Label(
+            notes_frame,
+            text="Additional Notes for Scheduling",
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
+        ).pack(anchor='w')
+        
+        self.schedule_notes = tk.Text(
+            notes_frame,
+            height=4,
+            font=('Segoe UI', 11),
+            bg=self.colors['bg_light'],
+            fg=self.colors['text'],
+            insertbackground=self.colors['text']
+        )
+        self.schedule_notes.pack(fill='x', pady=(5, 0))
+        
+        return frame
 
-        def save_donor_registration(self, window, notebook):
-            try:
-                # Validate current tab
-                current_tab = notebook.select()
-                tab_id = notebook.index(current_tab)
-                
-                if tab_id == 0:  # Personal Information
-                    self.validate_personal_info()
-                elif tab_id == 1:  # Health Screening
-                    self.validate_health_screening()
-                elif tab_id == 2:  # Scheduling
-                    self.validate_scheduling()
-                
-                # If all tabs are valid, save the donor
-                self.save_donor_to_database(window)
-                
-            except ValueError as e:
-                messagebox.showerror("Validation Error", str(e))
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to save donor: {str(e)}")
+    def save_donor_registration(self, window, notebook):
+        try:
+            # Validate current tab
+            current_tab = notebook.select()
+            tab_id = notebook.index(current_tab)
+            
+            if tab_id == 0:  # Personal Information
+                self.validate_personal_info()
+            elif tab_id == 1:  # Health Screening
+                self.validate_health_screening()
+            elif tab_id == 2:  # Scheduling
+                self.validate_scheduling()
+            
+            # If all tabs are valid, save the donor
+            self.save_donor_to_database(window)
+            
+        except ValueError as e:
+            messagebox.showerror("Validation Error", str(e))
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to save donor: {str(e)}")
 
-        def validate_personal_info(self):
-            name = self.personal_entries['name'].get().strip()
-            age = self.personal_entries['age'].get().strip()
-            blood_group = self.personal_entries['blood_group'].get()
-            contact = self.personal_entries['contact'].get().strip()
-            email = self.personal_entries['email'].get().strip()
-            
-            if not all([name, age, blood_group, contact]):
-                raise ValueError("Please fill in all required fields")
-            
-            try:
-                age = int(age)
-                if age < 18 or age > 65:
-                    raise ValueError("Age must be between 18 and 65")
-            except ValueError:
-                raise ValueError("Please enter a valid age")
-            
-            if email and not self.validate_email(email):
-                raise ValueError("Please enter a valid email address")
+    def validate_personal_info(self):
+        name = self.personal_entries['name'].get().strip()
+        age = self.personal_entries['age'].get().strip()
+        blood_group = self.personal_entries['blood_group'].get()
+        contact = self.personal_entries['contact'].get().strip()
+        email = self.personal_entries['email'].get().strip()
+        
+        if not all([name, age, blood_group, contact]):
+            raise ValueError("Please fill in all required fields")
+        
+        try:
+            age = int(age)
+            if age < 18 or age > 65:
+                raise ValueError("Age must be between 18 and 65")
+        except ValueError:
+            raise ValueError("Please enter a valid age")
+        
+        if email and not self.validate_email(email):
+            raise ValueError("Please enter a valid email address")
 
-        def validate_health_screening(self):
-            if self.health_vars['Recent Donation'].get():
-                raise ValueError("Cannot donate if donated in last 3 months")
-            
-            critical_conditions = [
-                'Chronic Disease',
-                'Medications',
-                'Recent Surgery',
-                'Infections',
-                'Pregnancy'
-            ]
-            
-            if any(self.health_vars[condition].get() for condition in critical_conditions):
-                raise ValueError("Some health conditions prevent donation")
+    def validate_health_screening(self):
+        if self.health_vars['Recent Donation'].get():
+            raise ValueError("Cannot donate if donated in last 3 months")
+        
+        critical_conditions = [
+            'Chronic Disease',
+            'Medications',
+            'Recent Surgery',
+            'Infections',
+            'Pregnancy'
+        ]
+        
+        if any(self.health_vars[condition].get() for condition in critical_conditions):
+            raise ValueError("Some health conditions prevent donation")
 
-        def validate_scheduling(self):
-            selected_date = self.date_entry.get_date()
-            if not selected_date:
-                raise ValueError("Please select a donation date")
-            
-            if not self.time_var.get():
-                raise ValueError("Please select a time slot")
-            
-            # Validate that selected date is not in the past
-            if selected_date < date.today():
-                raise ValueError("Cannot schedule donation for past dates")
+    def validate_scheduling(self):
+        selected_date = self.date_entry.get_date()
+        if not selected_date:
+            raise ValueError("Please select a donation date")
+        
+        if not self.time_var.get():
+            raise ValueError("Please select a time slot")
+        
+        # Validate that selected date is not in the past
+        if selected_date < date.today():
+            raise ValueError("Cannot schedule donation for past dates")
 
-        def save_donor_to_database(self, window):
-            try:
-                # Insert donor information
-                self.cursor.execute("""
-                    INSERT INTO Donors (
-                        name, age, blood_group, contact_info,
-                        email, address, health_status, donation_date
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                """, (
-                    self.personal_entries['name'].get().strip(),
-                    int(self.personal_entries['age'].get()),
-                    self.personal_entries['blood_group'].get(),
-                    self.personal_entries['contact'].get().strip(),
-                    self.personal_entries['email'].get().strip(),
-                    self.personal_entries['address'].get().strip(),
-                    self.health_notes.get("1.0", tk.END).strip(),
-                    self.date_entry.get_date()
-                ))
-                
-                # Get the donor ID
-                donor_id = self.cursor.lastrowid
-                
-                # Schedule the donation
-                self.cursor.execute("""
-                    INSERT INTO DonationSchedule (
-                        donor_id, scheduled_date, time_slot, notes
-                    ) VALUES (%s, %s, %s, %s)
-                """, (
-                    donor_id,
-                    self.date_entry.get_date(),
-                    self.time_var.get(),
-                    self.schedule_notes.get("1.0", tk.END).strip()
-                ))
-                
-                self.db.commit()
-                messagebox.showinfo("Success", "Donor registered successfully!")
-                window.destroy()
-                
-            except Exception as e:
-                self.db.rollback()
-                raise Exception(f"Failed to save donor: {str(e)}")
-        def show_blood_requests(self):
-            for widget in self.main_container.winfo_children():
-                widget.destroy()
-                
-            main_frame = ttk.Frame(self.main_container, style='Modern.TFrame')
-            main_frame.pack(fill='both', expand=True)
-            
-            # Header with stats
-            self.create_request_header(main_frame)
-            
-            # Filters and search
-            filter_frame = self.create_request_filters(main_frame)
-            filter_frame.pack(fill='x', pady=(0, 20))
-            
-            # Request list
-            self.create_request_list(main_frame)
-
-        def create_request_header(self, parent):
-            header_frame = ttk.Frame(parent, style='Modern.TFrame')
-            header_frame.pack(fill='x', pady=(0, 20))
-            
-            # Title
-            ttk.Label(
-                header_frame,
-                text="Blood Requests",
-                style='Header.TLabel'
-            ).pack(side='left')
-            
-            # New request button
-            ttk.Button(
-                header_frame,
-                text="➕ New Request",
-                style='Modern.TButton',
-                command=self.show_request_form
-            ).pack(side='right')
-            
-            # Quick stats
+    def save_donor_to_database(self, window):
+        try:
+            # Insert donor information
             self.cursor.execute("""
-                SELECT 
-                    COUNT(*) as total,
-                    SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END) as pending,
-                    SUM(CASE WHEN status = 'Approved' THEN 1 ELSE 0 END) as approved,
-                    SUM(CASE WHEN status = 'Rejected' THEN 1 ELSE 0 END) as rejected
-                FROM Requests
-                WHERE request_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-            """)
-            stats = self.cursor.fetchone()
-            
-            stats_frame = ttk.Frame(parent, style='Modern.TFrame')
-            stats_frame.pack(fill='x', pady=(0, 20))
-            
-            stat_items = [
-                ("Total Requests", stats[0], "📊"),
-                ("Pending", stats[1], "⏳", self.colors['warning']),
-                ("Approved", stats[2], "✅", self.colors['success']),
-                ("Rejected", stats[3], "❌", self.colors['error'])
-            ]
-            
-            for i, (label, value, icon, *colors) in enumerate(stat_items):
-                card = ttk.Frame(stats_frame, style='Card.TFrame')
-                card.grid(row=0, column=i, padx=5, sticky='nsew')
-                
-                color = colors[0] if colors else self.colors['text']
-                
-                ttk.Label(
-                    card,
-                    text=f"{icon} {value}",
-                    font=('Segoe UI', 20, 'bold'),
-                    foreground=color,
-                    background=self.colors['card_bg']
-                ).pack(pady=(10, 5))
-                
-                ttk.Label(
-                    card,
-                    text=label,
-                    font=('Segoe UI', 10),
-                    foreground=self.colors['text_secondary'],
-                    background=self.colors['card_bg']
-                ).pack(pady=(0, 10))
-            
-            stats_frame.grid_columnconfigure((0,1,2,3), weight=1)
-
-        def create_request_filters(self, parent):
-            filter_frame = ttk.Frame(parent, style='Card.TFrame')
-            
-            # Status filter
-            status_frame = ttk.Frame(filter_frame, style='Card.TFrame')
-            status_frame.pack(side='left', padx=20, pady=10)
-            
-            self.status_var = tk.StringVar(value='All')
-            
-            ttk.Label(
-                status_frame,
-                text="Status:",
-                style='Subheader.TLabel'
-            ).pack(side='left', padx=(0, 10))
-            
-            for status in ['All', 'Pending', 'Approved', 'Rejected']:
-                ttk.Radiobutton(
-                    status_frame,
-                    text=status,
-                    variable=self.status_var,
-                    value=status,
-                    command=self.refresh_requests,
-                    style='Modern.TRadiobutton'
-                ).pack(side='left', padx=5)
-            
-            # Search
-            search_frame = ttk.Frame(filter_frame, style='Card.TFrame')
-            search_frame.pack(side='right', padx=20, pady=10)
-            
-            self.search_var = tk.StringVar()
-            self.search_var.trace('w', lambda *args: self.refresh_requests())
-            
-            search_entry = ttk.Entry(
-                search_frame,
-                textvariable=self.search_var,
-                font=('Segoe UI', 11),
-                width=30,
-                style='Modern.TEntry'
-            )
-            search_entry.pack(side='right')
-            
-            ttk.Label(
-                search_frame,
-                text="🔍",
-                font=('Segoe UI', 12),
-                background=self.colors['card_bg']
-            ).pack(side='right', padx=(0, 5))
-            
-            return filter_frame
-
-        def create_request_list(self, parent):
-            # Create Treeview
-            columns = (
-                'id', 'hospital', 'blood_group', 'units', 'date', 
-                'priority', 'status', 'notes'
-            )
-            
-            self.request_tree = ttk.Treeview(
-                parent,
-                columns=columns,
-                show='headings',
-                style='Modern.Treeview'
-            )
-            
-            # Configure columns
-            column_configs = {
-                'id': ('ID', 50),
-                'hospital': ('Hospital', 200),
-                'blood_group': ('Blood Group', 100),
-                'units': ('Units', 80),
-                'date': ('Date', 100),
-                'priority': ('Priority', 100),
-                'status': ('Status', 100),
-                'notes': ('Notes', 200)
-            }
-            
-            for col, (heading, width) in column_configs.items():
-                self.request_tree.heading(col, text=heading)
-                self.request_tree.column(col, width=width)
-            
-            # Add scrollbar
-            scrollbar = ttk.Scrollbar(
-                parent,
-                orient="vertical",
-                command=self.request_tree.yview
-            )
-            self.request_tree.configure(yscrollcommand=scrollbar.set)
-            
-            # Pack elements
-            self.request_tree.pack(side='left', fill='both', expand=True)
-            scrollbar.pack(side='right', fill='y')
-            
-            # Bind double-click event
-            self.request_tree.bind('<Double-1>', self.show_request_details)
-            
-            # Initial load
-            self.refresh_requests()
-
-        def refresh_requests(self):
-            self.request_tree.delete(*self.request_tree.get_children())
-            
-            status_filter = self.status_var.get()
-            search_term = self.search_var.get().strip()
-            
-            query = """
-                SELECT id, hospital_name, blood_group, units_requested,
-                    request_date, priority, status, notes
-                FROM Requests
-                WHERE (status = %s OR %s = 'All')
-                AND (
-                    hospital_name LIKE %s
-                    OR blood_group LIKE %s
-                    OR notes LIKE %s
-                )
-                ORDER BY request_date DESC
-            """
-            
-            search_pattern = f"%{search_term}%"
-            self.cursor.execute(query, (
-                status_filter, status_filter,
-                search_pattern, search_pattern, search_pattern
+                INSERT INTO Donors (
+                    name, age, blood_group, contact_info,
+                    email, address, health_status, donation_date
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                self.personal_entries['name'].get().strip(),
+                int(self.personal_entries['age'].get()),
+                self.personal_entries['blood_group'].get(),
+                self.personal_entries['contact'].get().strip(),
+                self.personal_entries['email'].get().strip(),
+                self.personal_entries['address'].get().strip(),
+                self.health_notes.get("1.0", tk.END).strip(),
+                self.date_entry.get_date()
             ))
             
-            for row in self.cursor.fetchall():
-                # Format date
-                row = list(row)
-                row[4] = row[4].strftime("%Y-%m-%d")
-                
-                # Add status color tags
-                status = row[6]
-                tag = f'status_{status.lower()}'
-                
-                self.request_tree.insert('', 'end', values=row, tags=(tag,))
+            # Get the donor ID
+            donor_id = self.cursor.lastrowid
             
-            # Configure status colors
-            self.request_tree.tag_configure(
-                'status_pending',
-                foreground=self.colors['warning']
-            )
-            self.request_tree.tag_configure(
-                'status_approved',
-                foreground=self.colors['success']
-            )
-            self.request_tree.tag_configure(
-                'status_rejected',
-                foreground=self.colors['error']
-            )
-
-        def show_request_details(self, event):
-            item = self.request_tree.selection()[0]
-            request_id = self.request_tree.item(item)['values'][0]
-            
-            details_window = tk.Toplevel(self.root)
-            details_window.title("Request Details")
-            details_window.geometry("600x800")
-            details_window.configure(bg=self.colors['bg_dark'])
-            
-            main_frame = ttk.Frame(details_window, style='Modern.TFrame')
-            main_frame.pack(fill='both', expand=True, padx=30, pady=30)
-            
-            # Fetch request details
+            # Schedule the donation
             self.cursor.execute("""
-                SELECT r.*, 
-                    b.units_available,
-                    (SELECT COUNT(*) FROM Requests 
-                        WHERE hospital_name = r.hospital_name) as total_requests
-                FROM Requests r
-                LEFT JOIN BloodBank b ON r.blood_group = b.blood_group
-                WHERE r.id = %s
-            """, (request_id,))
+                INSERT INTO DonationSchedule (
+                    donor_id, scheduled_date, time_slot, notes
+                ) VALUES (%s, %s, %s, %s)
+            """, (
+                donor_id,
+                self.date_entry.get_date(),
+                self.time_var.get(),
+                self.schedule_notes.get("1.0", tk.END).strip()
+            ))
             
-            request = self.cursor.fetchone()
+            self.db.commit()
+            messagebox.showinfo("Success", "Donor registered successfully!")
+            window.destroy()
             
-            # Header
-            ttk.Label(
-                main_frame,
-                text=f"Request #{request_id}",
-                style='Header.TLabel'
-            ).pack(pady=(0, 20))
-            
-            # Create details card
-            self.create_request_detail_card(main_frame, request)
-            
-            # Create action buttons
-            self.create_request_action_buttons(main_frame, request)
+        except Exception as e:
+            self.db.rollback()
+            raise Exception(f"Failed to save donor: {str(e)}")
+    
+    def show_blood_requests(self):
+        for widget in self.main_container.winfo_children():
+            widget.destroy()
+                
+        main_frame = ttk.Frame(self.main_container, style='Modern.TFrame')
+        main_frame.pack(fill='both', expand=True)
+        
+        # Header with stats
+        self.create_request_header(main_frame)
+        
+        # Filters and search
+        filter_frame = self.create_request_filters(main_frame)
+        filter_frame.pack(fill='x', pady=(0, 20))
+        
+        # Request list
+        self.create_request_list(main_frame)
 
-        def create_request_detail_card(self, parent, request):
-            card = ttk.Frame(parent, style='Card.TFrame')
-            card.pack(fill='x', pady=10)
+    def create_request_header(self, parent):
+        header_frame = ttk.Frame(parent, style='Modern.TFrame')
+        header_frame.pack(fill='x', pady=(0, 20))
+        
+        # Title - Use tk.Label
+        tk.Label(
+            header_frame,
+            text="Blood Requests",
+            font=('Segoe UI', 32, 'bold'),
+            bg=self.colors['bg_dark'],
+            fg=self.colors['text'],
+            pady=20
+        ).pack(side='left')
+        
+        # New request button
+        ttk.Button(
+            header_frame,
+            text="➕ New Request",
+            style='Modern.TButton',
+            command=self.show_request_form
+        ).pack(side='right')
+        
+        # Quick stats
+        self.cursor.execute("""
+            SELECT 
+                COUNT(*) as total,
+                SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END) as pending,
+                SUM(CASE WHEN status = 'Approved' THEN 1 ELSE 0 END) as approved,
+                SUM(CASE WHEN status = 'Rejected' THEN 1 ELSE 0 END) as rejected
+            FROM Requests
+            WHERE request_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+        """)
+        stats = self.cursor.fetchone()
+        
+        stats_frame = ttk.Frame(parent, style='Modern.TFrame')
+        stats_frame.pack(fill='x', pady=(0, 20))
+        
+        stat_items = [
+            ("Total Requests", stats[0], "📊"),
+            ("Pending", stats[1], "⏳", self.colors['warning']),
+            ("Approved", stats[2], "✅", self.colors['success']),
+            ("Rejected", stats[3], "❌", self.colors['error'])
+        ]
+        
+        for i, (label, value, icon, *colors) in enumerate(stat_items):
+            card = ttk.Frame(stats_frame, style='Card.TFrame')
+            card.grid(row=0, column=i, padx=5, sticky='nsew')
             
-            details = [
-                ("Hospital", request[1]),
-                ("Blood Group", request[2]),
-                ("Units Requested", request[3]),
-                ("Request Date", request[4].strftime("%Y-%m-%d")),
-                ("Priority", request[5]),
-                ("Status", request[6]),
-                ("Available Units", request[8]),
-                ("Total Hospital Requests", request[9])
-            ]
+            color = colors[0] if colors else self.colors['text']
             
-            for label, value in details:
-                detail_frame = ttk.Frame(card, style='Card.TFrame')
-                detail_frame.pack(fill='x', padx=20, pady=5)
-                
-                ttk.Label(
-                    detail_frame,
-                    text=label,
-                    style='Subheader.TLabel'
-                ).pack(side='left')
-                
-                value_color = self.get_value_color(label, value)
-                
-                ttk.Label(
-                    detail_frame,
-                    text=str(value),
-                    font=('Segoe UI', 12, 'bold'),
-                    foreground=value_color,
-                    background=self.colors['card_bg']
-                ).pack(side='right')
+            # Use tk.Label
+            tk.Label(
+                card,
+                text=f"{icon} {value}",
+                font=('Segoe UI', 20, 'bold'),
+                fg=color,
+                bg=self.colors['card_bg']
+            ).pack(pady=(10, 5))
             
-            if request[7]:  # Notes
-                notes_frame = ttk.Frame(card, style='Card.TFrame')
-                notes_frame.pack(fill='x', padx=20, pady=10)
-                
-                ttk.Label(
-                    notes_frame,
-                    text="Notes:",
-                    style='Subheader.TLabel'
-                ).pack(anchor='w')
-                
-                ttk.Label(
-                    notes_frame,
-                    text=request[7],
-                    wraplength=500,
-                    font=('Segoe UI', 11),
-                    foreground=self.colors['text'],
-                    background=self.colors['card_bg']
-                ).pack(pady=(5, 0))
+            # Use tk.Label
+            tk.Label(
+                card,
+                text=label,
+                font=('Segoe UI', 10),
+                fg=self.colors['text_secondary'],
+                bg=self.colors['card_bg']
+            ).pack(pady=(0, 10))
+        
+        stats_frame.grid_columnconfigure((0,1,2,3), weight=1)
 
-        def get_value_color(self, label, value):
-            if label == "Status":
-                status_colors = {
-                    'Pending': self.colors['warning'],
-                    'Approved': self.colors['success'],
-                    'Rejected': self.colors['error']
-                }
-                return status_colors.get(value, self.colors['text'])
-            elif label == "Priority":
-                priority_colors = {
-                    'Normal': self.colors['text'],
-                    'Urgent': self.colors['warning'],
-                    'Emergency': self.colors['error']
-                }
-                return priority_colors.get(value, self.colors['text'])
-            elif label == "Available Units":
-                if value < 5:
-                    return self.colors['error']
-                elif value < 10:
-                    return self.colors['warning']
-                return self.colors['success']
-            
-            return self.colors['text']
+    def create_request_filters(self, parent):
+        filter_frame = ttk.Frame(parent, style='Card.TFrame')
+        
+        # Status filter
+        status_frame = ttk.Frame(filter_frame, style='Card.TFrame')
+        status_frame.pack(side='left', padx=20, pady=10)
+        
+        self.status_var = tk.StringVar(value='All')
+        
+        # Use tk.Label
+        tk.Label(
+            status_frame,
+            text="Status:",
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
+        ).pack(side='left', padx=(0, 10))
+        
+        for status in ['All', 'Pending', 'Approved', 'Rejected']:
+            ttk.Radiobutton(
+                status_frame,
+                text=status,
+                variable=self.status_var,
+                value=status,
+                command=self.refresh_requests,
+                style='Modern.TRadiobutton'
+            ).pack(side='left', padx=5)
+        
+        # Search
+        search_frame = ttk.Frame(filter_frame, style='Card.TFrame')
+        search_frame.pack(side='right', padx=20, pady=10)
+        
+        self.search_var = tk.StringVar()
+        self.search_var.trace('w', lambda *args: self.refresh_requests())
+        
+        search_entry = ttk.Entry(
+            search_frame,
+            textvariable=self.search_var,
+            font=('Segoe UI', 11),
+            width=30,
+            style='Modern.TEntry'
+        )
+        search_entry.pack(side='right')
+        
+        # Use tk.Label
+        tk.Label(
+            search_frame,
+            text="🔍",
+            font=('Segoe UI', 12),
+            bg=self.colors['card_bg']
+        ).pack(side='right', padx=(0, 5))
+        
+        return filter_frame
 
-        def create_request_action_buttons(self, parent, request):
-            button_frame = ttk.Frame(parent, style='Modern.TFrame')
-            button_frame.pack(fill='x', pady=20)
-            
-            if request[6] == 'Pending':
-                ttk.Button(
-                    button_frame,
-                    text="✅ Approve",
-                    style='Modern.TButton',
-                    command=lambda: self.update_request_status(request[0], 'Approved')
-                ).pack(side='left', padx=5)
-                
-                ttk.Button(
-                    button_frame,
-                    text="❌ Reject",
-                    style='Modern.TButton',
-                    command=lambda: self.update_request_status(request[0], 'Rejected')
-                ).pack(side='left', padx=5)
-            
-            ttk.Button(
-                button_frame,
-                text="🖨️ Print",
-                style='Secondary.TButton',
-                command=lambda: self.print_request(request[0])
-            ).pack(side='right', padx=5)
+    def create_request_list(self, parent):
+        # Create Treeview
+        columns = (
+            'id', 'hospital', 'blood_group', 'units', 'date', 
+            'priority', 'status', 'notes'
+        )
+        
+        self.request_tree = ttk.Treeview(
+            parent,
+            columns=columns,
+            show='headings',
+            style='Modern.Treeview'
+        )
+        
+        # Configure columns
+        column_configs = {
+            'id': ('ID', 50),
+            'hospital': ('Hospital', 200),
+            'blood_group': ('Blood Group', 100),
+            'units': ('Units', 80),
+            'date': ('Date', 100),
+            'priority': ('Priority', 100),
+            'status': ('Status', 100),
+            'notes': ('Notes', 200)
+        }
+        
+        for col, (heading, width) in column_configs.items():
+            self.request_tree.heading(col, text=heading)
+            self.request_tree.column(col, width=width)
+        
+        # Add scrollbar
+        scrollbar = ttk.Scrollbar(
+            parent,
+            orient="vertical",
+            command=self.request_tree.yview
+        )
+        self.request_tree.configure(yscrollcommand=scrollbar.set)
+        
+        # Pack elements
+        self.request_tree.pack(side='left', fill='both', expand=True)
+        scrollbar.pack(side='right', fill='y')
+        
+        # Bind double-click event
+        self.request_tree.bind('<Double-1>', self.show_request_details)
+        
+        # Initial load
+        self.refresh_requests()
 
-        def update_request_status(self, request_id, status):
-            try:
-                self.cursor.execute("""
-                    UPDATE Requests 
-                    SET status = %s 
-                    WHERE id = %s
-                """, (status, request_id))
-                
-                if status == 'Approved':
-                    # Update blood bank inventory
-                    self.cursor.execute("""
-                        UPDATE BloodBank b
-                        JOIN Requests r ON b.blood_group = r.blood_group
-                        SET b.units_available = b.units_available - r.units_requested
-                        WHERE r.id = %s
-                    """, (request_id,))
-                
-                self.db.commit()
-                messagebox.showinfo("Success", f"Request {status.lower()} successfully")
-                self.refresh_requests()
-                
-            except Exception as e:
-                self.db.rollback()
-                messagebox.showerror("Error", f"Failed to update request: {str(e)}")
+    def refresh_requests(self):
+        self.request_tree.delete(*self.request_tree.get_children())
+        
+        status_filter = self.status_var.get()
+        search_term = self.search_var.get().strip()
+        
+        query = """
+            SELECT id, hospital_name, blood_group, units_requested,
+                request_date, priority, status, notes
+            FROM Requests
+            WHERE (status = %s OR %s = 'All')
+            AND (
+                hospital_name LIKE %s
+                OR blood_group LIKE %s
+                OR notes LIKE %s
+            )
+            ORDER BY request_date DESC
+        """
+        
+        search_pattern = f"%{search_term}%"
+        self.cursor.execute(query, (
+            status_filter, status_filter,
+            search_pattern, search_pattern, search_pattern
+        ))
+        
+        for row in self.cursor.fetchall():
+            # Format date
+            row = list(row)
+            row[4] = row[4].strftime("%Y-%m-%d")
+            
+            # Add status color tags
+            status = row[6]
+            tag = f'status_{status.lower()}'
+            
+            self.request_tree.insert('', 'end', values=row, tags=(tag,))
+        
+        # Configure status colors
+        self.request_tree.tag_configure(
+            'status_pending',
+            foreground=self.colors['warning']
+        )
+        self.request_tree.tag_configure(
+            'status_approved',
+            foreground=self.colors['success']
+        )
+        self.request_tree.tag_configure(
+            'status_rejected',
+            foreground=self.colors['error']
+        )
 
-        def print_request(self, request_id):
-            # Implement printing functionality
-            messagebox.showinfo("Print", "Printing request details...")
+    def show_request_details(self, event):
+        item = self.request_tree.selection()[0]
+        request_id = self.request_tree.item(item)['values'][0]
+        
+        details_window = tk.Toplevel(self.root)
+        details_window.title("Request Details")
+        details_window.geometry("600x800")
+        details_window.configure(bg=self.colors['bg_dark'])
+        
+        main_frame = ttk.Frame(details_window, style='Modern.TFrame')
+        main_frame.pack(fill='both', expand=True, padx=30, pady=30)
+        
+        # Fetch request details
+        self.cursor.execute("""
+            SELECT r.*, 
+                b.units_available,
+                (SELECT COUNT(*) FROM Requests 
+                    WHERE hospital_name = r.hospital_name) as total_requests
+            FROM Requests r
+            LEFT JOIN BloodBank b ON r.blood_group = b.blood_group
+            WHERE r.id = %s
+        """, (request_id,))
+        
+        request = self.cursor.fetchone()
+        
+        # Header - Use tk.Label
+        tk.Label(
+            main_frame,
+            text=f"Request #{request_id}",
+            font=('Segoe UI', 32, 'bold'),
+            bg=self.colors['bg_dark'],
+            fg=self.colors['text'],
+            pady=20
+        ).pack(pady=(0, 20))
+        
+        # Create details card
+        self.create_request_detail_card(main_frame, request)
+        
+        # Create action buttons
+        self.create_request_action_buttons(main_frame, request)
+
+    def create_request_detail_card(self, parent, request):
+        card = ttk.Frame(parent, style='Card.TFrame')
+        card.pack(fill='x', pady=10)
+        
+        details = [
+            ("Hospital", request[1]),
+            ("Blood Group", request[2]),
+            ("Units Requested", request[3]),
+            ("Request Date", request[4].strftime("%Y-%m-%d")),
+            ("Priority", request[5]),
+            ("Status", request[6]),
+            ("Available Units", request[8]),
+            ("Total Hospital Requests", request[9])
+        ]
+        
+        for label, value in details:
+            detail_frame = ttk.Frame(card, style='Card.TFrame')
+            detail_frame.pack(fill='x', padx=20, pady=5)
             
-        def show_analytics(self):
-            for widget in self.main_container.winfo_children():
-                widget.destroy()
-                
-            main_frame = ttk.Frame(self.main_container, style='Modern.TFrame')
-            main_frame.pack(fill='both', expand=True)
-            
-            # Header
-            header_frame = ttk.Frame(main_frame, style='Modern.TFrame')
-            header_frame.pack(fill='x', pady=(0, 20))
-            
-            ttk.Label(
-                header_frame,
-                text="Analytics Dashboard",
-                style='Header.TLabel'
+            # Use tk.Label
+            tk.Label(
+                detail_frame,
+                text=label,
+                font=('Segoe UI', 16),
+                bg=self.colors['card_bg'],
+                fg=self.colors['text_secondary'],
+                pady=10
             ).pack(side='left')
             
-            # Create date range selector
-            date_range_frame = ttk.Frame(header_frame, style='Card.TFrame')
-            date_range_frame.pack(side='right')
+            value_color = self.get_value_color(label, value)
             
-            ttk.Label(
-                date_range_frame,
-                text="Date Range:",
-                style='Subheader.TLabel'
-            ).pack(side='left', padx=(0, 10))
+            # Use tk.Label
+            tk.Label(
+                detail_frame,
+                text=str(value),
+                font=('Segoe UI', 12, 'bold'),
+                fg=value_color,
+                bg=self.colors['card_bg']
+            ).pack(side='right')
+        
+        if request[7]:  # Notes
+            notes_frame = ttk.Frame(card, style='Card.TFrame')
+            notes_frame.pack(fill='x', padx=20, pady=10)
             
-            ranges = ['Last 7 Days', 'Last 30 Days', 'Last 3 Months', 'Last Year']
-            self.date_range_var = tk.StringVar(value='Last 30 Days')
+            # Use tk.Label
+            tk.Label(
+                notes_frame,
+                text="Notes:",
+                font=('Segoe UI', 16),
+                bg=self.colors['card_bg'],
+                fg=self.colors['text_secondary'],
+                pady=10
+            ).pack(anchor='w')
             
-            range_combo = ttk.Combobox(
-                date_range_frame,
-                textvariable=self.date_range_var,
-                values=ranges,
-                state='readonly',
-                style='Modern.TCombobox'
-            )
-            range_combo.pack(side='left')
-            range_combo.bind('<<ComboboxSelected>>', self.update_analytics)
-            
-            # Create charts grid
-            charts_frame = ttk.Frame(main_frame, style='Modern.TFrame')
-            charts_frame.pack(fill='both', expand=True)
-            
-            # Configure grid
-            for i in range(2):
-                charts_frame.grid_columnconfigure(i, weight=1)
-                charts_frame.grid_rowconfigure(i, weight=1)
-            
-            # Create charts
-            self.create_donation_trend_chart(charts_frame, 0, 0)
-            self.create_blood_type_distribution_chart(charts_frame, 0, 1)
-            self.create_request_status_chart(charts_frame, 1, 0)
-            self.create_inventory_levels_chart(charts_frame, 1, 1)
+            # Use tk.Label
+            tk.Label(
+                notes_frame,
+                text=request[7],
+                wraplength=500,
+                font=('Segoe UI', 11),
+                fg=self.colors['text'],
+                bg=self.colors['card_bg']
+            ).pack(pady=(5, 0))
 
-        def create_donation_trend_chart(self, parent, row, col):
-            frame = ttk.Frame(parent, style='Card.TFrame')
-            frame.grid(row=row, column=col, padx=10, pady=10, sticky='nsew')
-            
-            ttk.Label(
-                frame,
-                text="Donation Trends",
-                style='CardHeader.TLabel'
-            ).pack(pady=(10, 20))
-            
-            fig = Figure(figsize=(6, 4), facecolor=self.colors['chart_bg'])
-            ax = fig.add_subplot(111)
-            
-            # Get donation data
-            date_range = self.get_date_range()
-            self.cursor.execute("""
-                SELECT DATE(donation_date) as date, COUNT(*) as count
-                FROM Donors
-                WHERE donation_date >= %s
-                GROUP BY DATE(donation_date)
-                ORDER BY date
-            """, (date_range,))
-            
-            dates = []
-            counts = []
-            for date, count in self.cursor.fetchall():
-                dates.append(date)
-                counts.append(count)
-            
-            # Plot data
-            ax.plot(dates, counts, color=self.colors['accent'], marker='o')
-            ax.set_facecolor(self.colors['chart_bg'])
-            ax.tick_params(colors=self.colors['text'])
-            ax.grid(True, color=self.colors['grid'], linestyle='--', alpha=0.7)
-            
-            # Rotate x-axis labels
-            plt.setp(ax.get_xticklabels(), rotation=45)
-            
-            canvas = FigureCanvasTkAgg(fig, frame)
-            canvas.draw()
-            canvas.get_tk_widget().pack(fill='both', expand=True, padx=20, pady=(0, 20))
-
-        def create_blood_type_distribution_chart(self, parent, row, col):
-            frame = ttk.Frame(parent, style='Card.TFrame')
-            frame.grid(row=row, column=col, padx=10, pady=10, sticky='nsew')
-            
-            ttk.Label(
-                frame,
-                text="Blood Type Distribution",
-                style='CardHeader.TLabel'
-            ).pack(pady=(10, 20))
-            
-            fig = Figure(figsize=(6, 4), facecolor=self.colors['chart_bg'])
-            ax = fig.add_subplot(111)
-            
-            # Get blood type data
-            self.cursor.execute("""
-                SELECT blood_group, units_available
-                FROM BloodBank
-                ORDER BY blood_group
-            """)
-            
-            blood_types = []
-            units = []
-            for blood_type, unit in self.cursor.fetchall():
-                blood_types.append(blood_type)
-                units.append(unit)
-            
-            # Create pie chart
-            colors = [self.colors['accent'], self.colors['success'], 
-                    self.colors['warning'], self.colors['error']]
-            ax.pie(units, labels=blood_types, colors=colors, autopct='%1.1f%%')
-            ax.set_facecolor(self.colors['chart_bg'])
-            
-            canvas = FigureCanvasTkAgg(fig, frame)
-            canvas.draw()
-            canvas.get_tk_widget().pack(fill='both', expand=True, padx=20, pady=(0, 20))
-
-        def create_request_status_chart(self, parent, row, col):
-            frame = ttk.Frame(parent, style='Card.TFrame')
-            frame.grid(row=row, column=col, padx=10, pady=10, sticky='nsew')
-            
-            ttk.Label(
-                frame,
-                text="Request Status Distribution",
-                style='CardHeader.TLabel'
-            ).pack(pady=(10, 20))
-            
-            fig = Figure(figsize=(6, 4), facecolor=self.colors['chart_bg'])
-            ax = fig.add_subplot(111)
-            
-            # Get request status data
-            date_range = self.get_date_range()
-            self.cursor.execute("""
-                SELECT status, COUNT(*) as count
-                FROM Requests
-                WHERE request_date >= %s
-                GROUP BY status
-            """, (date_range,))
-            
-            statuses = []
-            counts = []
-            for status, count in self.cursor.fetchall():
-                statuses.append(status)
-                counts.append(count)
-            
-            # Create bar chart
+    def get_value_color(self, label, value):
+        if label == "Status":
             status_colors = {
                 'Pending': self.colors['warning'],
                 'Approved': self.colors['success'],
                 'Rejected': self.colors['error']
             }
-            
-            colors = [status_colors.get(status, self.colors['accent']) for status in statuses]
-            
-            ax.bar(statuses, counts, color=colors)
-            ax.set_facecolor(self.colors['chart_bg'])
-            ax.tick_params(colors=self.colors['text'])
-            ax.grid(True, color=self.colors['grid'], linestyle='--', alpha=0.7)
-            
-            canvas = FigureCanvasTkAgg(fig, frame)
-            canvas.draw()
-            canvas.get_tk_widget().pack(fill='both', expand=True, padx=20, pady=(0, 20))
+            return status_colors.get(value, self.colors['text'])
+        elif label == "Priority":
+            priority_colors = {
+                'Normal': self.colors['text'],
+                'Urgent': self.colors['warning'],
+                'Emergency': self.colors['error']
+            }
+            return priority_colors.get(value, self.colors['text'])
+        elif label == "Available Units":
+            if value < 5:
+                return self.colors['error']
+            elif value < 10:
+                return self.colors['warning']
+            return self.colors['success']
+        
+        return self.colors['text']
 
-        def create_inventory_levels_chart(self, parent, row, col):
-            frame = ttk.Frame(parent, style='Card.TFrame')
-            frame.grid(row=row, column=col, padx=10, pady=10, sticky='nsew')
-            
-            ttk.Label(
-                frame,
-                text="Current Inventory Levels",
-                style='CardHeader.TLabel'
-            ).pack(pady=(10, 20))
-            
-            fig = Figure(figsize=(6, 4), facecolor=self.colors['chart_bg'])
-            ax = fig.add_subplot(111)
-            
-            # Get inventory data
-            self.cursor.execute("""
-                SELECT blood_group, units_available
-                FROM BloodBank
-                ORDER BY blood_group
-            """)
-            
-            blood_types = []
-            units = []
-            for blood_type, unit in self.cursor.fetchall():
-                blood_types.append(blood_type)
-                units.append(unit)
-            
-            # Create horizontal bar chart
-            bars = ax.barh(blood_types, units, color=self.colors['accent'])
-            ax.set_facecolor(self.colors['chart_bg'])
-            ax.tick_params(colors=self.colors['text'])
-            ax.grid(True, color=self.colors['grid'], linestyle='--', alpha=0.7)
-            
-            # Add value labels
-            for bar in bars:
-                width = bar.get_width()
-                ax.text(width, bar.get_y() + bar.get_height()/2,
-                    f'{int(width):,}',
-                    ha='left', va='center', color=self.colors['text'])
-            
-            canvas = FigureCanvasTkAgg(fig, frame)
-            canvas.draw()
-            canvas.get_tk_widget().pack(fill='both', expand=True, padx=20, pady=(0, 20))
-
-        def get_date_range(self):
-            range_text = self.date_range_var.get()
-            today = date.today()
-            
-            if range_text == 'Last 7 Days':
-                return today - timedelta(days=7)
-            elif range_text == 'Last 30 Days':
-                return today - timedelta(days=30)
-            elif range_text == 'Last 3 Months':
-                return today - timedelta(days=90)
-            else:  # Last Year
-                return today - timedelta(days=365)
-
-        def update_analytics(self, event=None):
-            self.show_analytics()
-
-        def show_settings(self):
-            settings_window = tk.Toplevel(self.root)
-            settings_window.title("Settings")
-            settings_window.geometry("800x600")
-            settings_window.configure(bg=self.colors['bg_dark'])
-            
-            main_frame = ttk.Frame(settings_window, style='Modern.TFrame')
-            main_frame.pack(fill='both', expand=True, padx=30, pady=30)
-            
-            # Header
-            ttk.Label(
-                main_frame,
-                text="System Settings",
-                style='Header.TLabel'
-            ).pack(pady=(0, 30))
-            
-            # Settings sections
-            sections = [
-                ("User Management", "👥", self.show_user_management),
-                ("Notification Settings", "🔔", self.show_notification_settings),
-                ("Database Backup", "💾", self.backup_database),
-                ("Theme Settings", "🎨", self.show_theme_settings),
-                ("System Logs", "📋", self.show_system_logs)
-            ]
-            
-            for title, icon, command in sections:
-                section_frame = ttk.Frame(main_frame, style='Card.TFrame')
-                section_frame.pack(fill='x', pady=5)
-                
-                ttk.Label(
-                    section_frame,
-                    text=f"{icon} {title}",
-                    style='Subheader.TLabel'
-                ).pack(side='left', padx=20, pady=15)
-                
-                ttk.Button(
-                    section_frame,
-                    text="Configure",
-                    style='Modern.TButton',
-                    command=command
-                ).pack(side='right', padx=20)
-
-        def validate_email(self, email):
-            pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-            return re.match(pattern, email) is not None
-
-    def show_donation_form(self, blood_type=None):
-            donation_window = tk.Toplevel(self.root)
-            donation_window.title("New Blood Donation")
-            donation_window.geometry("600x800")
-            donation_window.configure(bg=self.colors['bg_dark'])
-            
-            main_frame = ttk.Frame(donation_window, style='Modern.TFrame')
-            main_frame.pack(fill='both', expand=True, padx=30, pady=30)
-            
-            # Header
-            ttk.Label(
-                main_frame,
-                text="New Blood Donation",
-                style='Header.TLabel'
-            ).pack(pady=(0, 20))
-            
-            # Form
-            form_frame = ttk.Frame(main_frame, style='Card.TFrame')
-            form_frame.pack(fill='x', pady=10)
-            
-            # Blood type selection
-            blood_type_frame = ttk.Frame(form_frame, style='Card.TFrame')
-            blood_type_frame.pack(fill='x', padx=20, pady=10)
-            
-            ttk.Label(
-                blood_type_frame,
-                text="Blood Type*",
-                style='Subheader.TLabel'
-            ).pack(anchor='w')
-            
-            blood_type_var = tk.StringVar(value=blood_type if blood_type else '')
-            blood_type_combo = ttk.Combobox(
-                blood_type_frame,
-                textvariable=blood_type_var,
-                values=['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
-                state='readonly' if blood_type else 'normal',
-                style='Modern.TCombobox'
-            )
-            blood_type_combo.pack(fill='x', pady=(5, 0))
-            
-            # Units
-            units_frame = ttk.Frame(form_frame, style='Card.TFrame')
-            units_frame.pack(fill='x', padx=20, pady=10)
-            
-            ttk.Label(
-                units_frame,
-                text="Units*",
-                style='Subheader.TLabel'
-            ).pack(anchor='w')
-            
-            units_var = tk.StringVar()
-            units_entry = ttk.Entry(
-                units_frame,
-                textvariable=units_var,
-                style='Modern.TEntry'
-            )
-            units_entry.pack(fill='x', pady=(5, 0))
-            
-            # Donor Information
-            donor_frame = ttk.Frame(form_frame, style='Card.TFrame')
-            donor_frame.pack(fill='x', padx=20, pady=10)
-            
-            ttk.Label(
-                donor_frame,
-                text="Donor Selection",
-                style='Subheader.TLabel'
-            ).pack(anchor='w')
-            
-            donor_var = tk.StringVar()
-            self.cursor.execute(
-                "SELECT id, name FROM Donors WHERE blood_group = %s",
-                (blood_type if blood_type else 'A+',)
-            )
-            donors = self.cursor.fetchall()
-            donor_list = [f"{d[0]} - {d[1]}" for d in donors]
-            
-            donor_combo = ttk.Combobox(
-                donor_frame,
-                textvariable=donor_var,
-                values=donor_list,
-                style='Modern.TCombobox'
-            )
-            donor_combo.pack(fill='x', pady=(5, 0))
-            
-            ttk.Button(
-                donor_frame,
-                text="➕ Add New Donor",
-                style='Secondary.TButton',
-                command=self.show_donor_registration
-            ).pack(fill='x', pady=(10, 0))
-            
-            # Notes
-            notes_frame = ttk.Frame(form_frame, style='Card.TFrame')
-            notes_frame.pack(fill='x', padx=20, pady=10)
-            
-            ttk.Label(
-                notes_frame,
-                text="Additional Notes",
-                style='Subheader.TLabel'
-            ).pack(anchor='w')
-            
-            notes_text = tk.Text(
-                notes_frame,
-                height=4,
-                font=('Segoe UI', 11),
-                bg=self.colors['bg_light'],
-                fg=self.colors['text'],
-                insertbackground=self.colors['text']
-            )
-            notes_text.pack(fill='x', pady=(5, 0))
-            
-            # Action buttons
-            button_frame = ttk.Frame(main_frame, style='Modern.TFrame')
-            button_frame.pack(fill='x', pady=20)
-            
+    def create_request_action_buttons(self, parent, request):
+        button_frame = ttk.Frame(parent, style='Modern.TFrame')
+        button_frame.pack(fill='x', pady=20)
+        
+        if request[6] == 'Pending':
             ttk.Button(
                 button_frame,
-                text="Cancel",
-                style='Secondary.TButton',
-                command=donation_window.destroy
+                text="✅ Approve",
+                style='Modern.TButton',
+                command=lambda: self.update_request_status(request[0], 'Approved')
             ).pack(side='left', padx=5)
             
             ttk.Button(
                 button_frame,
-                text="Save Donation",
+                text="❌ Reject",
                 style='Modern.TButton',
-                command=lambda: self.save_donation(
-                    blood_type_var.get(),
-                    units_var.get(),
-                    donor_var.get(),
-                    notes_text.get("1.0", tk.END).strip(),
-                    donation_window
-                )
-            ).pack(side='right', padx=5)
+                command=lambda: self.update_request_status(request[0], 'Rejected')
+            ).pack(side='left', padx=5)
+        
+        ttk.Button(
+            button_frame,
+            text="🖨️ Print",
+            style='Secondary.TButton',
+            command=lambda: self.print_request(request[0])
+        ).pack(side='right', padx=5)
+
+    def update_request_status(self, request_id, status):
+        try:
+            self.cursor.execute("""
+                UPDATE Requests 
+                SET status = %s 
+                WHERE id = %s
+            """, (status, request_id))
+            
+            if status == 'Approved':
+                # Update blood bank inventory
+                self.cursor.execute("""
+                    UPDATE BloodBank b
+                    JOIN Requests r ON b.blood_group = r.blood_group
+                    SET b.units_available = b.units_available - r.units_requested
+                    WHERE r.id = %s
+                """, (request_id,))
+            
+            self.db.commit()
+            messagebox.showinfo("Success", f"Request {status.lower()} successfully")
+            self.refresh_requests()
+            
+        except Exception as e:
+            self.db.rollback()
+            messagebox.showerror("Error", f"Failed to update request: {str(e)}")
+            
+    def print_request(self, request_id):
+        # Implement printing functionality
+        messagebox.showinfo("Print", "Printing request details...")
+        
+    def show_analytics(self):
+        for widget in self.main_container.winfo_children():
+            widget.destroy()
+                
+        main_frame = ttk.Frame(self.main_container, style='Modern.TFrame')
+        main_frame.pack(fill='both', expand=True)
+        
+        # Header
+        header_frame = ttk.Frame(main_frame, style='Modern.TFrame')
+        header_frame.pack(fill='x', pady=(0, 20))
+        
+        # Use tk.Label
+        tk.Label(
+            header_frame,
+            text="Analytics Dashboard",
+            font=('Segoe UI', 32, 'bold'),
+            bg=self.colors['bg_dark'],
+            fg=self.colors['text'],
+            pady=20
+        ).pack(side='left')
+        
+        # Create date range selector
+        date_range_frame = ttk.Frame(header_frame, style='Card.TFrame')
+        date_range_frame.pack(side='right')
+        
+        # Use tk.Label
+        tk.Label(
+            date_range_frame,
+            text="Date Range:",
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
+        ).pack(side='left', padx=(0, 10))
+        
+        ranges = ['Last 7 Days', 'Last 30 Days', 'Last 3 Months', 'Last Year']
+        self.date_range_var = tk.StringVar(value='Last 30 Days')
+        
+        range_combo = ttk.Combobox(
+            date_range_frame,
+            textvariable=self.date_range_var,
+            values=ranges,
+            state='readonly',
+            style='Modern.TCombobox'
+        )
+        range_combo.pack(side='left')
+        range_combo.bind('<<ComboboxSelected>>', self.update_analytics)
+        
+        # Create charts grid
+        charts_frame = ttk.Frame(main_frame, style='Modern.TFrame')
+        charts_frame.pack(fill='both', expand=True)
+        
+        # Configure grid
+        for i in range(2):
+            charts_frame.grid_columnconfigure(i, weight=1)
+            charts_frame.grid_rowconfigure(i, weight=1)
+        
+        # Create charts
+        self.create_donation_trend_chart(charts_frame, 0, 0)
+        self.create_blood_type_distribution_chart(charts_frame, 0, 1)
+        self.create_request_status_chart(charts_frame, 1, 0)
+        self.create_inventory_levels_chart(charts_frame, 1, 1)
+
+    def create_donation_trend_chart(self, parent, row, col):
+        frame = ttk.Frame(parent, style='Card.TFrame')
+        frame.grid(row=row, column=col, padx=10, pady=10, sticky='nsew')
+        
+        # Use tk.Label
+        tk.Label(
+            frame,
+            text="Donation Trends",
+            font=('Segoe UI', 18, 'bold'),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text'],
+            padx=20,
+            pady=10
+        ).pack(pady=(10, 20))
+        
+        fig = Figure(figsize=(6, 4), facecolor=self.colors['chart_bg'])
+        ax = fig.add_subplot(111)
+        
+        # Get donation data
+        date_range = self.get_date_range()
+        self.cursor.execute("""
+            SELECT DATE(donation_date) as date, COUNT(*) as count
+            FROM Donors
+            WHERE donation_date >= %s
+            GROUP BY DATE(donation_date)
+            ORDER BY date
+        """, (date_range,))
+        
+        dates = []
+        counts = []
+        for date, count in self.cursor.fetchall():
+            dates.append(date)
+            counts.append(count)
+        
+        # Plot data
+        ax.plot(dates, counts, color=self.colors['accent'], marker='o')
+        ax.set_facecolor(self.colors['chart_bg'])
+        ax.tick_params(colors=self.colors['text'])
+        ax.grid(True, color=self.colors['grid'], linestyle='--', alpha=0.7)
+        
+        # Rotate x-axis labels
+        plt.setp(ax.get_xticklabels(), rotation=45)
+        
+        canvas = FigureCanvasTkAgg(fig, frame)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill='both', expand=True, padx=20, pady=(0, 20))
+
+    def create_blood_type_distribution_chart(self, parent, row, col):
+        frame = ttk.Frame(parent, style='Card.TFrame')
+        frame.grid(row=row, column=col, padx=10, pady=10, sticky='nsew')
+        
+        # Use tk.Label
+        tk.Label(
+            frame,
+            text="Blood Type Distribution",
+            font=('Segoe UI', 18, 'bold'),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text'],
+            padx=20,
+            pady=10
+        ).pack(pady=(10, 20))
+        
+        fig = Figure(figsize=(6, 4), facecolor=self.colors['chart_bg'])
+        ax = fig.add_subplot(111)
+        
+        # Get blood type data
+        self.cursor.execute("""
+            SELECT blood_group, units_available
+            FROM BloodBank
+            ORDER BY blood_group
+        """)
+        
+        blood_types = []
+        units = []
+        for blood_type, unit in self.cursor.fetchall():
+            blood_types.append(blood_type)
+            units.append(unit)
+        
+        # Create pie chart
+        colors = [self.colors['accent'], self.colors['success'], 
+                self.colors['warning'], self.colors['error']]
+        ax.pie(units, labels=blood_types, colors=colors, autopct='%1.1f%%')
+        ax.set_facecolor(self.colors['chart_bg'])
+        
+        canvas = FigureCanvasTkAgg(fig, frame)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill='both', expand=True, padx=20, pady=(0, 20))
+
+    def create_request_status_chart(self, parent, row, col):
+        frame = ttk.Frame(parent, style='Card.TFrame')
+        frame.grid(row=row, column=col, padx=10, pady=10, sticky='nsew')
+        
+        # Use tk.Label
+        tk.Label(
+            frame,
+            text="Request Status Distribution",
+            font=('Segoe UI', 18, 'bold'),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text'],
+            padx=20,
+            pady=10
+        ).pack(pady=(10, 20))
+        
+        fig = Figure(figsize=(6, 4), facecolor=self.colors['chart_bg'])
+        ax = fig.add_subplot(111)
+        
+        # Get request status data
+        date_range = self.get_date_range()
+        self.cursor.execute("""
+            SELECT status, COUNT(*) as count
+            FROM Requests
+            WHERE request_date >= %s
+            GROUP BY status
+        """, (date_range,))
+        
+        statuses = []
+        counts = []
+        for status, count in self.cursor.fetchall():
+            statuses.append(status)
+            counts.append(count)
+        
+        # Create bar chart
+        status_colors = {
+            'Pending': self.colors['warning'],
+            'Approved': self.colors['success'],
+            'Rejected': self.colors['error']
+        }
+        
+        colors = [status_colors.get(status, self.colors['accent']) for status in statuses]
+        
+        ax.bar(statuses, counts, color=colors)
+        ax.set_facecolor(self.colors['chart_bg'])
+        ax.tick_params(colors=self.colors['text'])
+        ax.grid(True, color=self.colors['grid'], linestyle='--', alpha=0.7)
+        
+        canvas = FigureCanvasTkAgg(fig, frame)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill='both', expand=True, padx=20, pady=(0, 20))
+
+    def create_inventory_levels_chart(self, parent, row, col):
+        frame = ttk.Frame(parent, style='Card.TFrame')
+        frame.grid(row=row, column=col, padx=10, pady=10, sticky='nsew')
+        
+        # Use tk.Label
+        tk.Label(
+            frame,
+            text="Current Inventory Levels",
+            font=('Segoe UI', 18, 'bold'),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text'],
+            padx=20,
+            pady=10
+        ).pack(pady=(10, 20))
+        
+        fig = Figure(figsize=(6, 4), facecolor=self.colors['chart_bg'])
+        ax = fig.add_subplot(111)
+        
+        # Get inventory data
+        self.cursor.execute("""
+            SELECT blood_group, units_available
+            FROM BloodBank
+            ORDER BY blood_group
+        """)
+        
+        blood_types = []
+        units = []
+        for blood_type, unit in self.cursor.fetchall():
+            blood_types.append(blood_type)
+            units.append(unit)
+        
+        # Create horizontal bar chart
+        bars = ax.barh(blood_types, units, color=self.colors['accent'])
+        ax.set_facecolor(self.colors['chart_bg'])
+        ax.tick_params(colors=self.colors['text'])
+        ax.grid(True, color=self.colors['grid'], linestyle='--', alpha=0.7)
+        
+        # Add value labels
+        for bar in bars:
+            width = bar.get_width()
+            ax.text(width, bar.get_y() + bar.get_height()/2,
+                f'{int(width):,}',
+                ha='left', va='center', color=self.colors['text'])
+        
+        canvas = FigureCanvasTkAgg(fig, frame)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill='both', expand=True, padx=20, pady=(0, 20))
+
+    def get_date_range(self):
+        range_text = self.date_range_var.get()
+        today = date.today()
+        
+        if range_text == 'Last 7 Days':
+            return today - timedelta(days=7)
+        elif range_text == 'Last 30 Days':
+            return today - timedelta(days=30)
+        elif range_text == 'Last 3 Months':
+            return today - timedelta(days=90)
+        else:  # Last Year
+            return today - timedelta(days=365)
+
+    def update_analytics(self, event=None):
+        self.show_analytics()
+
+
+    def show_settings(self):
+        settings_window = tk.Toplevel(self.root)
+        settings_window.title("Settings")
+        settings_window.geometry("800x600")
+        settings_window.configure(bg=self.colors['bg_dark'])
+        
+        main_frame = ttk.Frame(settings_window, style='Modern.TFrame')
+        main_frame.pack(fill='both', expand=True, padx=30, pady=30)
+        
+        # Header - Use tk.Label
+        tk.Label(
+            main_frame,
+            text="System Settings",
+            font=('Segoe UI', 32, 'bold'),
+            bg=self.colors['bg_dark'],
+            fg=self.colors['text'],
+            pady=20
+        ).pack(pady=(0, 30))
+        
+        # Settings sections
+        sections = [
+            ("User Management", "👥", self.show_user_management),
+            ("Notification Settings", "🔔", self.show_notification_settings),
+            ("Database Backup", "💾", self.backup_database),
+            ("Theme Settings", "🎨", self.show_theme_settings),
+            ("System Logs", "📋", self.show_system_logs)
+        ]
+        
+        for title, icon, command in sections:
+            section_frame = ttk.Frame(main_frame, style='Card.TFrame')
+            section_frame.pack(fill='x', pady=5)
+            
+            # Use tk.Label
+            tk.Label(
+                section_frame,
+                text=f"{icon} {title}",
+                font=('Segoe UI', 16),
+                bg=self.colors['card_bg'],
+                fg=self.colors['text_secondary'],
+                pady=10
+            ).pack(side='left', padx=20, pady=15)
+            
+            ttk.Button(
+                section_frame,
+                text="Configure",
+                style='Modern.TButton',
+                command=command
+            ).pack(side='right', padx=20)
+
+    def validate_email(self, email):
+        pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        return re.match(pattern, email) is not None
+
+    def show_donation_form(self, blood_type=None):
+        donation_window = tk.Toplevel(self.root)
+        donation_window.title("New Blood Donation")
+        donation_window.geometry("600x800")
+        donation_window.configure(bg=self.colors['bg_dark'])
+        
+        main_frame = ttk.Frame(donation_window, style='Modern.TFrame')
+        main_frame.pack(fill='both', expand=True, padx=30, pady=30)
+        
+        # Header - Use tk.Label
+        tk.Label(
+            main_frame,
+            text="New Blood Donation",
+            font=('Segoe UI', 32, 'bold'),
+            bg=self.colors['bg_dark'],
+            fg=self.colors['text'],
+            pady=20
+        ).pack(pady=(0, 20))
+        
+        # Form
+        form_frame = ttk.Frame(main_frame, style='Card.TFrame')
+        form_frame.pack(fill='x', pady=10)
+        
+        # Blood type selection
+        blood_type_frame = ttk.Frame(form_frame, style='Card.TFrame')
+        blood_type_frame.pack(fill='x', padx=20, pady=10)
+        
+        # Use tk.Label
+        tk.Label(
+            blood_type_frame,
+            text="Blood Type*",
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
+        ).pack(anchor='w')
+        
+        blood_type_var = tk.StringVar(value=blood_type if blood_type else '')
+        blood_type_combo = ttk.Combobox(
+            blood_type_frame,
+            textvariable=blood_type_var,
+            values=['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
+            state='readonly' if blood_type else 'normal',
+            style='Modern.TCombobox'
+        )
+        blood_type_combo.pack(fill='x', pady=(5, 0))
+        
+        # Units
+        units_frame = ttk.Frame(form_frame, style='Card.TFrame')
+        units_frame.pack(fill='x', padx=20, pady=10)
+        
+        # Use tk.Label
+        tk.Label(
+            units_frame,
+            text="Units*",
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
+        ).pack(anchor='w')
+        
+        units_var = tk.StringVar()
+        units_entry = ttk.Entry(
+            units_frame,
+            textvariable=units_var,
+            style='Modern.TEntry'
+        )
+        units_entry.pack(fill='x', pady=(5, 0))
+        
+        # Donor Information
+        donor_frame = ttk.Frame(form_frame, style='Card.TFrame')
+        donor_frame.pack(fill='x', padx=20, pady=10)
+        
+        # Use tk.Label
+        tk.Label(
+            donor_frame,
+            text="Donor Selection",
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
+        ).pack(anchor='w')
+        
+        donor_var = tk.StringVar()
+        self.cursor.execute(
+            "SELECT id, name FROM Donors WHERE blood_group = %s",
+            (blood_type if blood_type else 'A+',)
+        )
+        donors = self.cursor.fetchall()
+        donor_list = [f"{d[0]} - {d[1]}" for d in donors]
+        
+        donor_combo = ttk.Combobox(
+            donor_frame,
+            textvariable=donor_var,
+            values=donor_list,
+            style='Modern.TCombobox'
+        )
+        donor_combo.pack(fill='x', pady=(5, 0))
+        
+        ttk.Button(
+            donor_frame,
+            text="➕ Add New Donor",
+            style='Secondary.TButton',
+            command=self.show_donor_registration
+        ).pack(fill='x', pady=(10, 0))
+        
+        # Notes
+        notes_frame = ttk.Frame(form_frame, style='Card.TFrame')
+        notes_frame.pack(fill='x', padx=20, pady=10)
+        
+        # Use tk.Label
+        tk.Label(
+            notes_frame,
+            text="Additional Notes",
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
+        ).pack(anchor='w')
+        
+        notes_text = tk.Text(
+            notes_frame,
+            height=4,
+            font=('Segoe UI', 11),
+            bg=self.colors['bg_light'],
+            fg=self.colors['text'],
+            insertbackground=self.colors['text']
+        )
+        notes_text.pack(fill='x', pady=(5, 0))
+        
+        # Action buttons
+        button_frame = ttk.Frame(main_frame, style='Modern.TFrame')
+        button_frame.pack(fill='x', pady=20)
+        
+        ttk.Button(
+            button_frame,
+            text="Cancel",
+            style='Secondary.TButton',
+            command=donation_window.destroy
+        ).pack(side='left', padx=5)
+        
+        ttk.Button(
+            button_frame,
+            text="Save Donation",
+            style='Modern.TButton',
+            command=lambda: self.save_donation(
+                blood_type_var.get(),
+                units_var.get(),
+                donor_var.get(),
+                notes_text.get("1.0", tk.END).strip(),
+                donation_window
+            )
+        ).pack(side='right', padx=5)
 
     def save_donation(self, blood_type, units, donor, notes, window):
         try:
@@ -2141,10 +2306,14 @@ class ModernBloodBankSystem:
             progress_window.geometry("300x150")
             progress_window.configure(bg=self.colors['bg_dark'])
             
-            ttk.Label(
+            # Use tk.Label
+            tk.Label(
                 progress_window,
                 text="Creating Database Backup...",
-                style='Subheader.TLabel'
+                font=('Segoe UI', 16),
+                bg=self.colors['bg_dark'],
+                fg=self.colors['text_secondary'],
+                pady=10
             ).pack(pady=20)
             
             progress = ttk.Progressbar(
@@ -2172,10 +2341,14 @@ class ModernBloodBankSystem:
         main_frame = ttk.Frame(settings_window, style='Modern.TFrame')
         main_frame.pack(fill='both', expand=True, padx=30, pady=30)
         
-        ttk.Label(
+        # Use tk.Label
+        tk.Label(
             main_frame,
             text="Notification Settings",
-            style='Header.TLabel'
+            font=('Segoe UI', 32, 'bold'),
+            bg=self.colors['bg_dark'],
+            fg=self.colors['text'],
+            pady=20
         ).pack(pady=(0, 20))
         
         # Notification options
@@ -2191,10 +2364,14 @@ class ModernBloodBankSystem:
             option_frame = ttk.Frame(main_frame, style='Card.TFrame')
             option_frame.pack(fill='x', pady=5)
             
-            ttk.Label(
+            # Use tk.Label
+            tk.Label(
                 option_frame,
                 text=label,
-                style='Subheader.TLabel'
+                font=('Segoe UI', 16),
+                bg=self.colors['card_bg'],
+                fg=self.colors['text_secondary'],
+                pady=10
             ).pack(side='left', padx=20, pady=10)
             
             tk.BooleanVar(value=True)  # Default to enabled
@@ -2212,10 +2389,14 @@ class ModernBloodBankSystem:
         main_frame = ttk.Frame(settings_window, style='Modern.TFrame')
         main_frame.pack(fill='both', expand=True, padx=30, pady=30)
         
-        ttk.Label(
+        # Use tk.Label
+        tk.Label(
             main_frame,
             text="Theme Settings",
-            style='Header.TLabel'
+            font=('Segoe UI', 32, 'bold'),
+            bg=self.colors['bg_dark'],
+            fg=self.colors['text'],
+            pady=20
         ).pack(pady=(0, 20))
         
         # Theme options
@@ -2249,10 +2430,14 @@ class ModernBloodBankSystem:
         main_frame = ttk.Frame(logs_window, style='Modern.TFrame')
         main_frame.pack(fill='both', expand=True, padx=30, pady=30)
         
-        ttk.Label(
+        # Use tk.Label
+        tk.Label(
             main_frame,
             text="System Logs",
-            style='Header.TLabel'
+            font=('Segoe UI', 32, 'bold'),
+            bg=self.colors['bg_dark'],
+            fg=self.colors['text'],
+            pady=20
         ).pack(pady=(0, 20))
         
         # Create Treeview for logs
@@ -2289,10 +2474,14 @@ class ModernBloodBankSystem:
         header_frame = ttk.Frame(main_frame, style='Modern.TFrame')
         header_frame.pack(fill='x', pady=(0, 20))
         
-        ttk.Label(
+        # Use tk.Label
+        tk.Label(
             header_frame,
             text="User Management",
-            style='Header.TLabel'
+            font=('Segoe UI', 32, 'bold'),
+            bg=self.colors['bg_dark'],
+            fg=self.colors['text'],
+            pady=20
         ).pack(side='left')
         
         ttk.Button(
@@ -2322,101 +2511,402 @@ class ModernBloodBankSystem:
             tree.insert('', 'end', values=user)
 
     def show_add_user_form(self):
-        # Implementation will be in the next part
-        pass
-
-    def show_password_reset(self):
-        # Implementation will be in the next part
-        pass
-
-    def show_add_user_form(self):
-            user_window = tk.Toplevel(self.root)
-            user_window.title("Add New User")
-            user_window.geometry("500x600")
-            user_window.configure(bg=self.colors['bg_dark'])
+        user_window = tk.Toplevel(self.root)
+        user_window.title("Add New User")
+        user_window.geometry("500x600")
+        user_window.configure(bg=self.colors['bg_dark'])
+        
+        main_frame = ttk.Frame(user_window, style='Modern.TFrame')
+        main_frame.pack(fill='both', expand=True, padx=30, pady=30)
+        
+        # Use tk.Label
+        tk.Label(
+            main_frame,
+            text="Add New User",
+            font=('Segoe UI', 32, 'bold'),
+            bg=self.colors['bg_dark'],
+            fg=self.colors['text'],
+            pady=20
+        ).pack(pady=(0, 20))
+        
+        # Form fields
+        fields = [
+            ("Username*", "username"),
+            ("Password*", "password"),
+            ("Confirm Password*", "confirm_password"),
+            ("Email*", "email")
+        ]
+        
+        entries = {}
+        for label, key in fields:
+            field_frame = ttk.Frame(main_frame, style='Card.TFrame')
+            field_frame.pack(fill='x', pady=10)
             
-            main_frame = ttk.Frame(user_window, style='Modern.TFrame')
-            main_frame.pack(fill='both', expand=True, padx=30, pady=30)
-            
-            ttk.Label(
-                main_frame,
-                text="Add New User",
-                style='Header.TLabel'
-            ).pack(pady=(0, 20))
-            
-            # Form fields
-            fields = [
-                ("Username*", "username"),
-                ("Password*", "password"),
-                ("Confirm Password*", "confirm_password"),
-                ("Email*", "email")
-            ]
-            
-            entries = {}
-            for label, key in fields:
-                field_frame = ttk.Frame(main_frame, style='Card.TFrame')
-                field_frame.pack(fill='x', pady=10)
-                
-                ttk.Label(
-                    field_frame,
-                    text=label,
-                    style='Subheader.TLabel'
-                ).pack(anchor='w')
-                
-                entry = ttk.Entry(
-                    field_frame,
-                    style='Modern.TEntry',
-                    show="•" if 'password' in key else ""
-                )
-                entry.pack(fill='x', pady=(5, 0))
-                entries[key] = entry
-            
-            # Role selection
-            role_frame = ttk.Frame(main_frame, style='Card.TFrame')
-            role_frame.pack(fill='x', pady=10)
-            
-            ttk.Label(
-                role_frame,
-                text="Role*",
-                style='Subheader.TLabel'
+            # Use tk.Label
+            tk.Label(
+                field_frame,
+                text=label,
+                font=('Segoe UI', 16),
+                bg=self.colors['card_bg'],
+                fg=self.colors['text_secondary'],
+                pady=10
             ).pack(anchor='w')
             
-            role_var = tk.StringVar(value='staff')
-            roles = [('Admin', 'admin'), ('Staff', 'staff')]
+            entry = ttk.Entry(
+                field_frame,
+                style='Modern.TEntry',
+                show="•" if 'password' in key else ""
+            )
+            entry.pack(fill='x', pady=(5, 0))
+            entries[key] = entry
+        
+        # Role selection
+        role_frame = ttk.Frame(main_frame, style='Card.TFrame')
+        role_frame.pack(fill='x', pady=10)
+        
+        # Use tk.Label
+        tk.Label(
+            role_frame,
+            text="Role*",
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
+        ).pack(anchor='w')
+        
+        role_var = tk.StringVar(value='staff')
+        roles = [('Admin', 'admin'), ('Staff', 'staff')]
+        
+        for role_text, role_value in roles:
+            ttk.Radiobutton(
+                role_frame,
+                text=role_text,
+                variable=role_var,
+                value=role_value,
+                style='Modern.TRadiobutton'
+            ).pack(anchor='w', pady=5)
+        
+        # Buttons
+        button_frame = ttk.Frame(main_frame, style='Modern.TFrame')
+        button_frame.pack(fill='x', pady=20)
+        
+        ttk.Button(
+            button_frame,
+            text="Cancel",
+            style='Secondary.TButton',
+            command=user_window.destroy
+        ).pack(side='left', padx=5)
+        
+        ttk.Button(
+            button_frame,
+            text="Create User",
+            style='Modern.TButton',
+            command=lambda: self.create_user(
+                entries['username'].get(),
+                entries['password'].get(),
+                entries['confirm_password'].get(),
+                entries['email'].get(),
+                role_var.get(),
+                user_window
+            )
+        ).pack(side='right', padx=5)
+
+    def show_password_reset(self):
+        reset_window = tk.Toplevel(self.root)
+        reset_window.title("Reset Password")
+        reset_window.geometry("400x500")
+        reset_window.configure(bg=self.colors['bg_dark'])
+        
+        main_frame = ttk.Frame(reset_window, style='Modern.TFrame')
+        main_frame.pack(fill='both', expand=True, padx=30, pady=30)
+        
+        # Use tk.Label
+        tk.Label(
+            main_frame,
+            text="Reset Password",
+            font=('Segoe UI', 32, 'bold'),
+            bg=self.colors['bg_dark'],
+            fg=self.colors['text'],
+            pady=20
+        ).pack(pady=(0, 20))
+        
+        # Form fields
+        fields = [
+            ("Username*", "username"),
+            ("Email*", "email"),
+            ("New Password*", "password"),
+            ("Confirm Password*", "confirm")
+        ]
+        
+        entries = {}
+        for label, key in fields:
+            field_frame = ttk.Frame(main_frame, style='Card.TFrame')
+            field_frame.pack(fill='x', pady=10)
             
-            for role_text, role_value in roles:
-                ttk.Radiobutton(
-                    role_frame,
-                    text=role_text,
-                    variable=role_var,
-                    value=role_value,
-                    style='Modern.TRadiobutton'
-                ).pack(anchor='w', pady=5)
+            # Use tk.Label
+            tk.Label(
+                field_frame,
+                text=label,
+                font=('Segoe UI', 16),
+                bg=self.colors['card_bg'],
+                fg=self.colors['text_secondary'],
+                pady=10
+            ).pack(anchor='w')
             
-            # Buttons
-            button_frame = ttk.Frame(main_frame, style='Modern.TFrame')
-            button_frame.pack(fill='x', pady=20)
+            entry = ttk.Entry(
+                field_frame,
+                style='Modern.TEntry',
+                show="•" if 'password' in key else ""
+            )
+            entry.pack(fill='x', pady=(5, 0))
+            entries[key] = entry
+        
+        ttk.Button(
+            main_frame,
+            text="Reset Password",
+            style='Modern.TButton',
+            command=lambda: self.reset_password(
+                entries['username'].get(),
+                entries['email'].get(),
+                entries['password'].get(),
+                entries['confirm'].get(),
+                reset_window
+            )
+        ).pack(fill='x', pady=20)
+
+    def generate_report(self):
+        report_window = tk.Toplevel(self.root)
+        report_window.title("Generate Report")
+        report_window.geometry("800x800")  # Made taller to accommodate calendars
+        report_window.configure(bg=self.colors['bg_dark'])
+        
+        main_frame = ttk.Frame(report_window, style='Modern.TFrame')
+        main_frame.pack(fill='both', expand=True, padx=30, pady=30)
+        
+        # Use tk.Label
+        tk.Label(
+            main_frame,
+            text="Generate Report",
+            font=('Segoe UI', 32, 'bold'),
+            bg=self.colors['bg_dark'],
+            fg=self.colors['text'],
+            pady=20
+        ).pack(pady=(0, 20))
+        
+        # Date range selection
+        date_frame = ttk.Frame(main_frame, style='Card.TFrame')
+        date_frame.pack(fill='x', pady=10)
+        
+        # Use tk.Label
+        tk.Label(
+            date_frame,
+            text="Date Range",
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
+        ).pack(anchor='w', padx=20)
+        
+        # Calendar container
+        calendars_frame = ttk.Frame(date_frame, style='Card.TFrame')
+        calendars_frame.pack(fill='x', padx=20, pady=10)
+        
+        # Start date
+        start_frame = ttk.Frame(calendars_frame, style='Card.TFrame')
+        start_frame.pack(side='left', padx=10)
+        
+        # Use tk.Label
+        tk.Label(
+            start_frame,
+            text="From:",
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
+        ).pack()
+        
+        start_date = ModernCalendar(
+            start_frame,
+            self.colors
+        )
+        start_date.pack()
+        
+        # End date
+        end_frame = ttk.Frame(calendars_frame, style='Card.TFrame')
+        end_frame.pack(side='left', padx=10)
+        
+        # Use tk.Label
+        tk.Label(
+            end_frame,
+            text="To:",
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
+        ).pack()
+        
+        end_date = ModernCalendar(
+            end_frame,
+            self.colors
+        )
+        end_date.pack()
+        
+        # Report type selection
+        report_frame = ttk.Frame(main_frame, style='Card.TFrame')
+        report_frame.pack(fill='x', pady=20)
+        
+        # Use tk.Label
+        tk.Label(
+            report_frame,
+            text="Report Type",
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
+        ).pack(anchor='w', padx=20)
+        
+        report_var = tk.StringVar(value="donation")
+        for report_type, label in [
+            ("donation", "Donation Report"),
+            ("inventory", "Inventory Report"),
+            ("requests", "Requests Report"),
+            ("users", "Users Activity Report")
+        ]:
+            ttk.Radiobutton(
+                report_frame,
+                text=label,
+                variable=report_var,
+                value=report_type,
+                style='Modern.TRadiobutton'
+            ).pack(anchor='w', padx=40, pady=5)
+        
+        # Action buttons
+        button_frame = ttk.Frame(main_frame, style='Modern.TFrame')
+        button_frame.pack(fill='x', pady=20)
+        
+        ttk.Button(
+            button_frame,
+            text="Generate PDF",
+            style='Modern.TButton',
+            command=lambda: self.generate_pdf_report(
+                start_date, 
+                end_date,
+                report_var.get()
+            )
+        ).pack(side='left', padx=5)
+        
+        ttk.Button(
+            button_frame,
+            text="Export to Excel",
+            style='Modern.TButton',
+            command=lambda: self.export_excel_report(
+                start_date,
+                end_date,
+                report_var.get()
+            )
+        ).pack(side='right', padx=5)
+
+
+    def show_add_user_form(self):
+        user_window = tk.Toplevel(self.root)
+        user_window.title("Add New User")
+        user_window.geometry("500x600")
+        user_window.configure(bg=self.colors['bg_dark'])
+        
+        main_frame = ttk.Frame(user_window, style='Modern.TFrame')
+        main_frame.pack(fill='both', expand=True, padx=30, pady=30)
+        
+        # Use tk.Label instead of ttk.Label
+        tk.Label(
+            main_frame,
+            text="Add New User",
+            font=('Segoe UI', 32, 'bold'),
+            bg=self.colors['bg_dark'],
+            fg=self.colors['text'],
+            pady=20
+        ).pack(pady=(0, 20))
+        
+        # Form fields
+        fields = [
+            ("Username*", "username"),
+            ("Password*", "password"),
+            ("Confirm Password*", "confirm_password"),
+            ("Email*", "email")
+        ]
+        
+        entries = {}
+        for label, key in fields:
+            field_frame = ttk.Frame(main_frame, style='Card.TFrame')
+            field_frame.pack(fill='x', pady=10)
             
-            ttk.Button(
-                button_frame,
-                text="Cancel",
-                style='Secondary.TButton',
-                command=user_window.destroy
-            ).pack(side='left', padx=5)
+            # Use tk.Label
+            tk.Label(
+                field_frame,
+                text=label,
+                font=('Segoe UI', 16),
+                bg=self.colors['card_bg'],
+                fg=self.colors['text_secondary'],
+                pady=10
+            ).pack(anchor='w')
             
-            ttk.Button(
-                button_frame,
-                text="Create User",
-                style='Modern.TButton',
-                command=lambda: self.create_user(
-                    entries['username'].get(),
-                    entries['password'].get(),
-                    entries['confirm_password'].get(),
-                    entries['email'].get(),
-                    role_var.get(),
-                    user_window
-                )
-            ).pack(side='right', padx=5)
+            entry = ttk.Entry(
+                field_frame,
+                style='Modern.TEntry',
+                show="•" if 'password' in key else ""
+            )
+            entry.pack(fill='x', pady=(5, 0))
+            entries[key] = entry
+        
+        # Role selection
+        role_frame = ttk.Frame(main_frame, style='Card.TFrame')
+        role_frame.pack(fill='x', pady=10)
+        
+        # Use tk.Label
+        tk.Label(
+            role_frame,
+            text="Role*",
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
+        ).pack(anchor='w')
+        
+        role_var = tk.StringVar(value='staff')
+        roles = [('Admin', 'admin'), ('Staff', 'staff')]
+        
+        for role_text, role_value in roles:
+            ttk.Radiobutton(
+                role_frame,
+                text=role_text,
+                variable=role_var,
+                value=role_value,
+                style='Modern.TRadiobutton'
+            ).pack(anchor='w', pady=5)
+        
+        # Buttons
+        button_frame = ttk.Frame(main_frame, style='Modern.TFrame')
+        button_frame.pack(fill='x', pady=20)
+        
+        ttk.Button(
+            button_frame,
+            text="Cancel",
+            style='Secondary.TButton',
+            command=user_window.destroy
+        ).pack(side='left', padx=5)
+        
+        ttk.Button(
+            button_frame,
+            text="Create User",
+            style='Modern.TButton',
+            command=lambda: self.create_user(
+                entries['username'].get(),
+                entries['password'].get(),
+                entries['confirm_password'].get(),
+                entries['email'].get(),
+                role_var.get(),
+                user_window
+            )
+        ).pack(side='right', padx=5)
 
     def create_user(self, username, password, confirm_password, email, role, window):
         try:
@@ -2461,10 +2951,14 @@ class ModernBloodBankSystem:
         main_frame = ttk.Frame(reset_window, style='Modern.TFrame')
         main_frame.pack(fill='both', expand=True, padx=30, pady=30)
         
-        ttk.Label(
+        # Use tk.Label
+        tk.Label(
             main_frame,
             text="Reset Password",
-            style='Header.TLabel'
+            font=('Segoe UI', 32, 'bold'),
+            bg=self.colors['bg_dark'],
+            fg=self.colors['text'],
+            pady=20
         ).pack(pady=(0, 20))
         
         # Form fields
@@ -2480,10 +2974,14 @@ class ModernBloodBankSystem:
             field_frame = ttk.Frame(main_frame, style='Card.TFrame')
             field_frame.pack(fill='x', pady=10)
             
-            ttk.Label(
+            # Use tk.Label
+            tk.Label(
                 field_frame,
                 text=label,
-                style='Subheader.TLabel'
+                font=('Segoe UI', 16),
+                bg=self.colors['card_bg'],
+                fg=self.colors['text_secondary'],
+                pady=10
             ).pack(anchor='w')
             
             entry = ttk.Entry(
@@ -2550,20 +3048,28 @@ class ModernBloodBankSystem:
         main_frame = ttk.Frame(report_window, style='Modern.TFrame')
         main_frame.pack(fill='both', expand=True, padx=30, pady=30)
         
-        ttk.Label(
+        # Use tk.Label
+        tk.Label(
             main_frame,
             text="Generate Report",
-            style='Header.TLabel'
+            font=('Segoe UI', 32, 'bold'),
+            bg=self.colors['bg_dark'],
+            fg=self.colors['text'],
+            pady=20
         ).pack(pady=(0, 20))
         
         # Date range selection
         date_frame = ttk.Frame(main_frame, style='Card.TFrame')
         date_frame.pack(fill='x', pady=10)
         
-        ttk.Label(
+        # Use tk.Label
+        tk.Label(
             date_frame,
             text="Date Range",
-            style='Subheader.TLabel'
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
         ).pack(anchor='w', padx=20)
         
         # Calendar container
@@ -2574,10 +3080,14 @@ class ModernBloodBankSystem:
         start_frame = ttk.Frame(calendars_frame, style='Card.TFrame')
         start_frame.pack(side='left', padx=10)
         
-        ttk.Label(
+        # Use tk.Label
+        tk.Label(
             start_frame,
             text="From:",
-            style='Subheader.TLabel'
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
         ).pack()
         
         start_date = ModernCalendar(
@@ -2590,10 +3100,14 @@ class ModernBloodBankSystem:
         end_frame = ttk.Frame(calendars_frame, style='Card.TFrame')
         end_frame.pack(side='left', padx=10)
         
-        ttk.Label(
+        # Use tk.Label
+        tk.Label(
             end_frame,
             text="To:",
-            style='Subheader.TLabel'
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
         ).pack()
         
         end_date = ModernCalendar(
@@ -2601,6 +3115,61 @@ class ModernBloodBankSystem:
             self.colors
         )
         end_date.pack()
+        
+        # Report type selection
+        report_frame = ttk.Frame(main_frame, style='Card.TFrame')
+        report_frame.pack(fill='x', pady=20)
+        
+        # Use tk.Label
+        tk.Label(
+            report_frame,
+            text="Report Type",
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
+        ).pack(anchor='w', padx=20)
+        
+        report_var = tk.StringVar(value="donation")
+        for report_type, label in [
+            ("donation", "Donation Report"),
+            ("inventory", "Inventory Report"),
+            ("requests", "Requests Report"),
+            ("users", "Users Activity Report")
+        ]:
+            ttk.Radiobutton(
+                report_frame,
+                text=label,
+                variable=report_var,
+                value=report_type,
+                style='Modern.TRadiobutton'
+            ).pack(anchor='w', padx=40, pady=5)
+        
+        # Action buttons
+        button_frame = ttk.Frame(main_frame, style='Modern.TFrame')
+        button_frame.pack(fill='x', pady=20)
+        
+        ttk.Button(
+            button_frame,
+            text="Generate PDF",
+            style='Modern.TButton',
+            command=lambda: self.generate_pdf_report(
+                start_date, 
+                end_date,
+                report_var.get()
+            )
+        ).pack(side='left', padx=5)
+        
+        ttk.Button(
+            button_frame,
+            text="Export to Excel",
+            style='Modern.TButton',
+            command=lambda: self.export_excel_report(
+                start_date,
+                end_date,
+                report_var.get()
+            )
+        ).pack(side='right', padx=5)
 
     def generate_pdf_report(self, start_date, end_date, report_type):
         start_date = start_date.get_date()  # Get date from ModernCalendar
@@ -2619,6 +3188,10 @@ class ModernBloodBankSystem:
             f"Exporting {report_type} to Excel for {start_date} to {end_date}"
         )
 
+    def run(self):
+        """Start the Tkinter main event loop"""
+        self.root.mainloop()
+    
 if __name__ == "__main__":
     try:
         app = ModernBloodBankSystem()
