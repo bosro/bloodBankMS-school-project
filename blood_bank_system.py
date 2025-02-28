@@ -248,51 +248,130 @@ class ModernBloodBankSystem:
         # Initialize login screen
         self.show_login_screen()
         
+    def show_simple_dashboard(self):
+        try:
+            # Clear main container
+            for widget in self.main_container.winfo_children():
+                widget.destroy()
+                
+            # Simple welcome message
+            frame = ttk.Frame(self.main_container, style='Modern.TFrame')
+            frame.pack(fill='both', expand=True, padx=30, pady=30)
+            
+            # Use tk.Label for reliable display
+            welcome = tk.Label(
+                frame,
+                text=f"Welcome, {self.current_user['username']}!",
+                font=('Segoe UI', 32, 'bold'),
+                bg=self.colors['bg_dark'],
+                fg=self.colors['text']
+            )
+            welcome.pack(pady=20)
+            
+            # Simple buttons for main functions
+            buttons_frame = tk.Frame(frame, bg=self.colors['bg_dark'])
+            buttons_frame.pack(pady=20)
+            
+            button_configs = [
+                ("Dashboard", self.show_dashboard),
+                ("New Donor", self.show_donor_registration),
+                ("Manage Requests", self.show_blood_requests),
+                ("View Analytics", self.show_analytics),
+                ("Logout", self.logout)
+            ]
+            
+            for text, command in button_configs:
+                btn = tk.Button(
+                    buttons_frame,
+                    text=text,
+                    font=('Segoe UI', 14),
+                    bg=self.colors['accent'],
+                    fg=self.colors['text'],
+                    padx=20,
+                    pady=10,
+                    command=command
+                )
+                btn.pack(fill='x', pady=5)
+                
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to show simple dashboard: {str(e)}")
+    
     def configure_custom_styles(self):
-        # Modern frame styles
-        self.style.configure('Modern.TFrame')
-        self.style.configure('Card.TFrame')
-        self.style.configure('DateEntry')
+        try:
+            # Modern frame styles
+            self.style.configure('Modern.TFrame', background=self.colors['bg_dark'])
+            self.style.configure('Card.TFrame', background=self.colors['card_bg'])
+            self.style.configure('DateEntry', background=self.colors['bg_light'])
 
-        # Modern button styles
-        self.style.configure('Modern.TButton',
-                           padding=(30, 15),
-                           font=('Segoe UI', 11))
-        
-        self.style.map('Modern.TButton')
-        
-        # Secondary button style
-        self.style.configure('Secondary.TButton',
-                           padding=(30, 15),
-                           font=('Segoe UI', 11))
-        
-        # Header styles
-        self.style.configure('Header.TLabel',
-                           font=('Segoe UI', 32, 'bold'),
-                           padding=(0, 20))
-        
-        self.style.configure('Subheader.TLabel',
-                           font=('Segoe UI', 16),
-                           padding=(0, 10))
-        
-        # Card header style
-        self.style.configure('CardHeader.TLabel',
-                           font=('Segoe UI', 18, 'bold'),
-                           padding=(20, 10))
-        
-        # Modern entry style
-        self.style.configure('Modern.TEntry',
-                           padding=(15, 10))
-        
-        # Treeview styling
-        self.style.configure('Treeview',
-                           borderwidth=0)
-        
-        self.style.configure('Treeview.Heading',
-                           padding=(10, 5))
-        
-        # Combobox styling
-        self.style.configure('TCombobox')
+            # Modern button styles
+            self.style.configure('Modern.TButton',
+                            padding=(30, 15),
+                            font=('Segoe UI', 11))
+            
+            self.style.map('Modern.TButton',
+                        background=[('active', self.colors['accent_hover']), 
+                                    ('!active', self.colors['accent'])],
+                        foreground=[('active', self.colors['text']), 
+                                    ('!active', self.colors['text'])])
+            
+            # Secondary button style
+            self.style.configure('Secondary.TButton',
+                            padding=(30, 15),
+                            font=('Segoe UI', 11))
+            
+            self.style.map('Secondary.TButton',
+                        background=[('active', self.colors['bg_light']), 
+                                    ('!active', self.colors['bg_light'])],
+                        foreground=[('active', self.colors['text']), 
+                                    ('!active', self.colors['text'])])
+            
+            # Header styles
+            self.style.configure('Header.TLabel',
+                            font=('Segoe UI', 32, 'bold'),
+                            padding=(0, 20),
+                            background=self.colors['bg_dark'],
+                            foreground=self.colors['text'])
+            
+            self.style.configure('Subheader.TLabel',
+                            font=('Segoe UI', 16),
+                            padding=(0, 10),
+                            background=self.colors['bg_dark'],
+                            foreground=self.colors['text_secondary'])
+            
+            # Card header style
+            self.style.configure('CardHeader.TLabel',
+                            font=('Segoe UI', 18, 'bold'),
+                            padding=(20, 10),
+                            background=self.colors['card_bg'],
+                            foreground=self.colors['text'])
+            
+            # Modern entry style
+            self.style.configure('Modern.TEntry',
+                            padding=(15, 10))
+            
+            # Treeview styling
+            self.style.configure('Treeview',
+                            background=self.colors['bg_light'],
+                            foreground=self.colors['text'],
+                            rowheight=25,
+                            fieldbackground=self.colors['bg_light'])
+            
+            self.style.map('Treeview',
+                        background=[('selected', self.colors['accent'])],
+                        foreground=[('selected', self.colors['text'])])
+            
+            self.style.configure('Treeview.Heading',
+                            background=self.colors['bg_dark'],
+                            foreground=self.colors['text'],
+                            padding=(10, 5))
+            
+            # Combobox styling
+            self.style.configure('TCombobox',
+                            background=self.colors['bg_light'],
+                            foreground=self.colors['text'])
+                            
+        except Exception as e:
+            print(f"Error configuring styles: {e}")
 
     def init_database(self):
         try:
@@ -585,12 +664,18 @@ class ModernBloodBankSystem:
             
             if result and bcrypt.checkpw(password.encode('utf-8'), result[0].encode('utf-8')):
                 self.current_user = {'username': username, 'role': result[1]}
-                # Update last login
-                self.cursor.execute(
-                    "UPDATE Users SET last_login = CURRENT_TIMESTAMP WHERE username = %s",
-                    (username,)
-                )
-                self.db.commit()
+                
+                # Try to update last_login, but continue if it fails
+                try:
+                    self.cursor.execute(
+                        "UPDATE Users SET last_login = CURRENT_TIMESTAMP WHERE username = %s",
+                        (username,)
+                    )
+                    self.db.commit()
+                except mysql.connector.Error:
+                    # Silently continue if the last_login column doesn't exist
+                    self.db.rollback()
+                    
                 self.show_dashboard()
             else:
                 self.show_error("Invalid username or password")
@@ -602,17 +687,59 @@ class ModernBloodBankSystem:
         # Clear error after 3 seconds
         self.root.after(3000, lambda: self.error_label.configure(text=""))
         
-    
-    def show_dashboard(self):
-        if not self.current_user:
-            self.show_login_screen()
-            return
 
-        for widget in self.main_container.winfo_children():
-            widget.destroy()
-        
-        # Create main layout with sidebar and content area
-        self.setup_dashboard_layout()
+    def show_dashboard(self):
+        try:
+            if not self.current_user:
+                self.show_login_screen()
+                return
+
+            print("Starting dashboard setup")  # Debug print
+            
+            # Clear all widgets from main container
+            for widget in self.main_container.winfo_children():
+                widget.destroy()
+            
+            print("Creating dashboard layout")  # Debug print
+            
+            # Create sidebar
+            sidebar = ttk.Frame(self.main_container, style='Card.TFrame')
+            sidebar.pack(side='left', fill='y', padx=(0, 20))
+            
+            # User profile section
+            print("Creating user profile")  # Debug print
+            self.create_user_profile(sidebar)
+            
+            # Navigation menu
+            print("Creating navigation menu")  # Debug print
+            self.create_navigation_menu(sidebar)
+            
+            # Main content area
+            print("Creating main content area")  # Debug print
+            content_frame = ttk.Frame(self.main_container, style='Modern.TFrame')
+            content_frame.pack(side='left', fill='both', expand=True)
+            
+            # Force update of UI
+            self.root.update_idletasks()
+            
+            # Dashboard header
+            print("Creating dashboard header")  # Debug print
+            self.create_dashboard_header(content_frame)
+            
+            # Quick stats
+            print("Creating quick stats")  # Debug print
+            self.create_quick_stats(content_frame)
+            
+            # Blood inventory
+            print("Showing blood inventory")  # Debug print
+            self.show_blood_inventory(content_frame)
+            
+            print("Dashboard setup complete")  # Debug print
+            
+        except Exception as e:
+            print(f"Error in dashboard: {e}")  # Debug print
+            messagebox.showerror("Dashboard Error", f"Error setting up dashboard: {str(e)}")
+            self.show_simple_dashboard()
         
     def setup_dashboard_layout(self):
         # Create sidebar
@@ -842,18 +969,307 @@ class ModernBloodBankSystem:
             command=lambda: self.refresh_inventory()
         ).pack(side='right')
         
+        # Create a separate frame for the blood type cards grid
+        blood_types_frame = ttk.Frame(inventory_frame, style='Modern.TFrame')
+        blood_types_frame.pack(fill='both', expand=True)
+        
         # Grid layout for blood type cards
         blood_types = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
         
         for i, blood_type in enumerate(blood_types):
-            self.create_blood_type_card(inventory_frame, blood_type, i)
+            self.create_blood_type_card(blood_types_frame, blood_type, i)
         
         # Configure grid weights
         for i in range(4):
-            inventory_frame.grid_columnconfigure(i, weight=1)
+            blood_types_frame.grid_columnconfigure(i, weight=1)
         for i in range(2):
-            inventory_frame.grid_rowconfigure(i, weight=1)
+            blood_types_frame.grid_rowconfigure(i, weight=1)
+            
+    def show_donation_history(self):
+        # Create a top-level window for donation history
+        history_window = tk.Toplevel(self.root)
+        history_window.title("Donation History")
+        history_window.geometry("800x600")
+        history_window.configure(bg=self.colors['bg_dark'])
+        
+        main_frame = ttk.Frame(history_window, style='Modern.TFrame')
+        main_frame.pack(fill='both', expand=True, padx=30, pady=30)
+        
+        # Header frame with back button
+        header_frame = ttk.Frame(main_frame, style='Modern.TFrame')
+        header_frame.pack(fill='x', pady=(0, 20))
+        
+        # Add back button
+        ttk.Button(
+            header_frame,
+            text="← Back",
+            style='Secondary.TButton',
+            command=history_window.destroy
+        ).pack(side='left', pady=5, padx=5)
+        
+        # Add a header
+        tk.Label(
+            header_frame,
+            text="Donation History",
+            font=('Segoe UI', 32, 'bold'),
+            bg=self.colors['bg_dark'],
+            fg=self.colors['text'],
+            pady=20
+        ).pack(side='left', padx=20)
+        
+        # Create a treeview to display donation history
+        columns = ('id', 'donor', 'blood_group', 'date', 'units', 'status')
+        tree = ttk.Treeview(main_frame, columns=columns, show='headings')
+        
+        # Define column headings
+        tree.heading('id', text='ID')
+        tree.heading('donor', text='Donor Name')
+        tree.heading('blood_group', text='Blood Group')
+        tree.heading('date', text='Donation Date')
+        tree.heading('units', text='Units')
+        tree.heading('status', text='Status')
+        
+        # Set column widths
+        tree.column('id', width=50)
+        tree.column('donor', width=150)
+        tree.column('blood_group', width=100)
+        tree.column('date', width=120)
+        tree.column('units', width=80)
+        tree.column('status', width=100)
+        
+        # Add a scrollbar
+        scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=tree.yview)
+        tree.configure(yscrollcommand=scrollbar.set)
+        
+        # Pack the tree and scrollbar
+        tree.pack(side='left', fill='both', expand=True)
+        scrollbar.pack(side='right', fill='y')
+        
+        # Fetch donation history from database
+        try:
+            self.cursor.execute("""
+                SELECT d.id, d.name, d.blood_group, d.donation_date, 
+                    ds.id, ds.status
+                FROM Donors d
+                JOIN DonationSchedule ds ON d.id = ds.donor_id
+                WHERE ds.status = 'Completed'
+                ORDER BY d.donation_date DESC
+            """)
+            
+            for row in self.cursor.fetchall():
+                # Format date
+                date_str = row[3].strftime("%Y-%m-%d")
+                # Default units to 1 (you might want to adjust this)
+                units = 1
+                tree.insert('', 'end', values=(row[4], row[1], row[2], date_str, units, row[5]))
+                
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load donation history: {str(e)}")
+        
+    def show_request_form(self, blood_type=None):
+        request_window = tk.Toplevel(self.root)
+        request_window.title("Blood Request Form")
+        request_window.geometry("600x700")
+        request_window.configure(bg=self.colors['bg_dark'])
+        
+        main_frame = ttk.Frame(request_window, style='Modern.TFrame')
+        main_frame.pack(fill='both', expand=True, padx=30, pady=30)
+        
+        # Header frame
+        header_frame = ttk.Frame(main_frame, style='Modern.TFrame')
+        header_frame.pack(fill='x', pady=(0, 20))
+        
+        # Back button
+        ttk.Button(
+            header_frame,
+            text="← Back",
+            style='Secondary.TButton',
+            command=request_window.destroy
+        ).pack(side='left', pady=5, padx=5)
+        
+        # Add header
+        tk.Label(
+            header_frame,
+            text="New Blood Request",
+            font=('Segoe UI', 32, 'bold'),
+            bg=self.colors['bg_dark'],
+            fg=self.colors['text'],
+            pady=20
+        ).pack(side='left', padx=20)
+        
+        # Form container
+        form_frame = ttk.Frame(main_frame, style='Card.TFrame')
+        form_frame.pack(fill='x', pady=10)
+        
+        # Hospital name
+        hospital_frame = ttk.Frame(form_frame, style='Card.TFrame')
+        hospital_frame.pack(fill='x', padx=20, pady=10)
+        
+        tk.Label(
+            hospital_frame,
+            text="Hospital Name*",
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
+        ).pack(anchor='w')
+        
+        hospital_var = tk.StringVar()
+        hospital_entry = ttk.Entry(
+            hospital_frame,
+            textvariable=hospital_var,
+            font=('Segoe UI', 12),
+            style='Modern.TEntry'
+        )
+        hospital_entry.pack(fill='x', pady=(5, 0))
+        
+        # Blood type
+        blood_type_frame = ttk.Frame(form_frame, style='Card.TFrame')
+        blood_type_frame.pack(fill='x', padx=20, pady=10)
+        
+        tk.Label(
+            blood_type_frame,
+            text="Blood Type*",
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
+        ).pack(anchor='w')
+        
+        blood_type_var = tk.StringVar(value=blood_type if blood_type else '')
+        blood_type_combo = ttk.Combobox(
+            blood_type_frame,
+            textvariable=blood_type_var,
+            values=['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
+            state='readonly' if blood_type else 'normal',
+            font=('Segoe UI', 12)
+        )
+        blood_type_combo.pack(fill='x', pady=(5, 0))
+        
+        # Units
+        units_frame = ttk.Frame(form_frame, style='Card.TFrame')
+        units_frame.pack(fill='x', padx=20, pady=10)
+        
+        tk.Label(
+            units_frame,
+            text="Units Required*",
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
+        ).pack(anchor='w')
+        
+        units_var = tk.StringVar()
+        units_entry = ttk.Entry(
+            units_frame,
+            textvariable=units_var,
+            font=('Segoe UI', 12),
+            style='Modern.TEntry'
+        )
+        units_entry.pack(fill='x', pady=(5, 0))
+        
+        # Priority
+        priority_frame = ttk.Frame(form_frame, style='Card.TFrame')
+        priority_frame.pack(fill='x', padx=20, pady=10)
+        
+        tk.Label(
+            priority_frame,
+            text="Priority*",
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
+        ).pack(anchor='w')
+        
+        priority_var = tk.StringVar(value='Normal')
+        for priority in ['Normal', 'Urgent', 'Emergency']:
+            ttk.Radiobutton(
+                priority_frame,
+                text=priority,
+                variable=priority_var,
+                value=priority,
+                style='Modern.TRadiobutton'
+            ).pack(anchor='w', pady=5)
+        
+        # Notes
+        notes_frame = ttk.Frame(form_frame, style='Card.TFrame')
+        notes_frame.pack(fill='x', padx=20, pady=10)
+        
+        tk.Label(
+            notes_frame,
+            text="Additional Notes",
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
+        ).pack(anchor='w')
+        
+        notes_text = tk.Text(
+            notes_frame,
+            height=4,
+            font=('Segoe UI', 12),
+            bg=self.colors['bg_light'],
+            fg=self.colors['text'],
+            insertbackground=self.colors['text']
+        )
+        notes_text.pack(fill='x', pady=(5, 0))
+        
+        # Buttons
+        button_frame = ttk.Frame(main_frame, style='Modern.TFrame')
+        button_frame.pack(fill='x', pady=20)
+        
+        ttk.Button(
+            button_frame,
+            text="Cancel",
+            style='Secondary.TButton',
+            command=request_window.destroy
+        ).pack(side='left', padx=5)
+        
+        ttk.Button(
+            button_frame,
+            text="Submit Request",
+            style='Modern.TButton',
+            command=lambda: self.save_blood_request(
+                hospital_var.get(),
+                blood_type_var.get(),
+                units_var.get(),
+                priority_var.get(),
+                notes_text.get("1.0", tk.END).strip(),
+                request_window
+            )
+        ).pack(side='right', padx=5)
 
+    def save_blood_request(self, hospital, blood_type, units, priority, notes, window):
+        """Save blood request to database"""
+        try:
+            # Validate inputs
+            if not all([hospital, blood_type, units]):
+                raise ValueError("Please fill in all required fields")
+            
+            try:
+                units = int(units)
+                if units <= 0:
+                    raise ValueError
+            except ValueError:
+                raise ValueError("Please enter a valid number of units")
+            
+            # Insert request into database
+            self.cursor.execute("""
+                INSERT INTO Requests (
+                    hospital_name, blood_group, units_requested,
+                    request_date, priority, notes
+                ) VALUES (%s, %s, %s, CURDATE(), %s, %s)
+            """, (hospital, blood_type, units, priority, notes))
+            
+            self.db.commit()
+            messagebox.showinfo("Success", "Blood request submitted successfully!")
+            window.destroy()
+            
+        except Exception as e:
+            self.db.rollback()
+            messagebox.showerror("Error", str(e))
+        
+        
     def create_blood_type_card(self, parent, blood_type, index):
         card = ttk.Frame(parent, style='Card.TFrame')
         card.grid(row=index//4, column=index%4, padx=10, pady=10, sticky='nsew')
@@ -964,6 +1380,14 @@ class ModernBloodBankSystem:
         header_frame = ttk.Frame(main_frame, style='Modern.TFrame')
         header_frame.pack(fill='x', pady=(0, 30))
         
+        # Back button
+        ttk.Button(
+            header_frame,
+            text="← Back",
+            style='Secondary.TButton',
+            command=registration_window.destroy
+        ).pack(side='left', pady=5, padx=5)
+        
         # Use tk.Label instead of ttk.Label
         tk.Label(
             header_frame,
@@ -972,7 +1396,7 @@ class ModernBloodBankSystem:
             bg=self.colors['bg_dark'],
             fg=self.colors['text'],
             pady=20
-        ).pack(side='left')
+        ).pack(side='left', padx=20)
         
         # Create notebook for tabbed interface
         notebook = ttk.Notebook(main_frame)
@@ -1357,7 +1781,82 @@ class ModernBloodBankSystem:
         main_frame.pack(fill='both', expand=True)
         
         # Header with stats
-        self.create_request_header(main_frame)
+        header_frame = ttk.Frame(main_frame, style='Modern.TFrame')
+        header_frame.pack(fill='x', pady=(0, 20))
+        
+        # Back button
+        ttk.Button(
+            header_frame,
+            text="← Back to Dashboard",
+            style='Secondary.TButton',
+            command=self.show_dashboard
+        ).pack(side='left', padx=10, pady=5)
+        
+        # Title - Use tk.Label
+        tk.Label(
+            header_frame,
+            text="Blood Requests",
+            font=('Segoe UI', 32, 'bold'),
+            bg=self.colors['bg_dark'],
+            fg=self.colors['text'],
+            pady=20
+        ).pack(side='left', padx=20)
+        
+        # New request button
+        ttk.Button(
+            header_frame,
+            text="➕ New Request",
+            style='Modern.TButton',
+            command=self.show_request_form
+        ).pack(side='right')
+        
+        # Quick stats
+        self.cursor.execute("""
+            SELECT 
+                COUNT(*) as total,
+                SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END) as pending,
+                SUM(CASE WHEN status = 'Approved' THEN 1 ELSE 0 END) as approved,
+                SUM(CASE WHEN status = 'Rejected' THEN 1 ELSE 0 END) as rejected
+            FROM Requests
+            WHERE request_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+        """)
+        stats = self.cursor.fetchone()
+        
+        stats_frame = ttk.Frame(main_frame, style='Modern.TFrame')
+        stats_frame.pack(fill='x', pady=(0, 20))
+        
+        stat_items = [
+            ("Total Requests", stats[0], "📊"),
+            ("Pending", stats[1], "⏳", self.colors['warning']),
+            ("Approved", stats[2], "✅", self.colors['success']),
+            ("Rejected", stats[3], "❌", self.colors['error'])
+        ]
+        
+        for i, (label, value, icon, *colors) in enumerate(stat_items):
+            card = ttk.Frame(stats_frame, style='Card.TFrame')
+            card.grid(row=0, column=i, padx=5, sticky='nsew')
+            
+            color = colors[0] if colors else self.colors['text']
+            
+            # Use tk.Label
+            tk.Label(
+                card,
+                text=f"{icon} {value}",
+                font=('Segoe UI', 20, 'bold'),
+                fg=color,
+                bg=self.colors['card_bg']
+            ).pack(pady=(10, 5))
+            
+            # Use tk.Label
+            tk.Label(
+                card,
+                text=label,
+                font=('Segoe UI', 10),
+                fg=self.colors['text_secondary'],
+                bg=self.colors['card_bg']
+            ).pack(pady=(0, 10))
+        
+        stats_frame.grid_columnconfigure((0,1,2,3), weight=1)
         
         # Filters and search
         filter_frame = self.create_request_filters(main_frame)
@@ -1784,7 +2283,15 @@ class ModernBloodBankSystem:
         header_frame = ttk.Frame(main_frame, style='Modern.TFrame')
         header_frame.pack(fill='x', pady=(0, 20))
         
-        # Use tk.Label
+        # Back button
+        ttk.Button(
+            header_frame,
+            text="← Back to Dashboard",
+            style='Secondary.TButton',
+            command=self.show_dashboard
+        ).pack(side='left', padx=10, pady=5)
+        
+        # Title
         tk.Label(
             header_frame,
             text="Analytics Dashboard",
@@ -1792,7 +2299,7 @@ class ModernBloodBankSystem:
             bg=self.colors['bg_dark'],
             fg=self.colors['text'],
             pady=20
-        ).pack(side='left')
+        ).pack(side='left', padx=20)
         
         # Create date range selector
         date_range_frame = ttk.Frame(header_frame, style='Card.TFrame')
@@ -2049,15 +2556,27 @@ class ModernBloodBankSystem:
         main_frame = ttk.Frame(settings_window, style='Modern.TFrame')
         main_frame.pack(fill='both', expand=True, padx=30, pady=30)
         
+        # Header frame
+        header_frame = ttk.Frame(main_frame, style='Modern.TFrame')
+        header_frame.pack(fill='x', pady=(0, 30))
+        
+        # Back button
+        ttk.Button(
+            header_frame,
+            text="← Back",
+            style='Secondary.TButton',
+            command=settings_window.destroy
+        ).pack(side='left', pady=5, padx=5)
+        
         # Header - Use tk.Label
         tk.Label(
-            main_frame,
+            header_frame,
             text="System Settings",
             font=('Segoe UI', 32, 'bold'),
             bg=self.colors['bg_dark'],
             fg=self.colors['text'],
             pady=20
-        ).pack(pady=(0, 30))
+        ).pack(side='left', padx=20)
         
         # Settings sections
         sections = [
@@ -2102,15 +2621,27 @@ class ModernBloodBankSystem:
         main_frame = ttk.Frame(donation_window, style='Modern.TFrame')
         main_frame.pack(fill='both', expand=True, padx=30, pady=30)
         
+        # Header frame
+        header_frame = ttk.Frame(main_frame, style='Modern.TFrame')
+        header_frame.pack(fill='x', pady=(0, 20))
+        
+        # Back button
+        ttk.Button(
+            header_frame,
+            text="← Back",
+            style='Secondary.TButton',
+            command=donation_window.destroy
+        ).pack(side='left', pady=5, padx=5)
+        
         # Header - Use tk.Label
         tk.Label(
-            main_frame,
+            header_frame,
             text="New Blood Donation",
             font=('Segoe UI', 32, 'bold'),
             bg=self.colors['bg_dark'],
             fg=self.colors['text'],
             pady=20
-        ).pack(pady=(0, 20))
+        ).pack(side='left', padx=20)
         
         # Form
         form_frame = ttk.Frame(main_frame, style='Card.TFrame')
@@ -2341,15 +2872,27 @@ class ModernBloodBankSystem:
         main_frame = ttk.Frame(settings_window, style='Modern.TFrame')
         main_frame.pack(fill='both', expand=True, padx=30, pady=30)
         
+        # Header frame
+        header_frame = ttk.Frame(main_frame, style='Modern.TFrame')
+        header_frame.pack(fill='x', pady=(0, 20))
+        
+        # Back button
+        ttk.Button(
+            header_frame,
+            text="← Back",
+            style='Secondary.TButton',
+            command=settings_window.destroy
+        ).pack(side='left', pady=5, padx=5)
+        
         # Use tk.Label
         tk.Label(
-            main_frame,
+            header_frame,
             text="Notification Settings",
             font=('Segoe UI', 32, 'bold'),
             bg=self.colors['bg_dark'],
             fg=self.colors['text'],
             pady=20
-        ).pack(pady=(0, 20))
+        ).pack(side='left', padx=20)
         
         # Notification options
         options = [
@@ -2389,15 +2932,27 @@ class ModernBloodBankSystem:
         main_frame = ttk.Frame(settings_window, style='Modern.TFrame')
         main_frame.pack(fill='both', expand=True, padx=30, pady=30)
         
+        # Header frame
+        header_frame = ttk.Frame(main_frame, style='Modern.TFrame')
+        header_frame.pack(fill='x', pady=(0, 20))
+        
+        # Back button
+        ttk.Button(
+            header_frame,
+            text="← Back",
+            style='Secondary.TButton',
+            command=settings_window.destroy
+        ).pack(side='left', pady=5, padx=5)
+        
         # Use tk.Label
         tk.Label(
-            main_frame,
+            header_frame,
             text="Theme Settings",
             font=('Segoe UI', 32, 'bold'),
             bg=self.colors['bg_dark'],
             fg=self.colors['text'],
             pady=20
-        ).pack(pady=(0, 20))
+        ).pack(side='left', padx=20)
         
         # Theme options
         themes = [
@@ -2430,15 +2985,27 @@ class ModernBloodBankSystem:
         main_frame = ttk.Frame(logs_window, style='Modern.TFrame')
         main_frame.pack(fill='both', expand=True, padx=30, pady=30)
         
+        # Header frame
+        header_frame = ttk.Frame(main_frame, style='Modern.TFrame')
+        header_frame.pack(fill='x', pady=(0, 20))
+        
+        # Back button
+        ttk.Button(
+            header_frame,
+            text="← Back",
+            style='Secondary.TButton',
+            command=logs_window.destroy
+        ).pack(side='left', pady=5, padx=5)
+        
         # Use tk.Label
         tk.Label(
-            main_frame,
+            header_frame,
             text="System Logs",
             font=('Segoe UI', 32, 'bold'),
             bg=self.colors['bg_dark'],
             fg=self.colors['text'],
             pady=20
-        ).pack(pady=(0, 20))
+        ).pack(side='left', padx=20)
         
         # Create Treeview for logs
         columns = ('timestamp', 'action', 'user', 'details')
@@ -2474,6 +3041,14 @@ class ModernBloodBankSystem:
         header_frame = ttk.Frame(main_frame, style='Modern.TFrame')
         header_frame.pack(fill='x', pady=(0, 20))
         
+        # Back button
+        ttk.Button(
+            header_frame,
+            text="← Back",
+            style='Secondary.TButton',
+            command=users_window.destroy
+        ).pack(side='left', pady=5, padx=5)
+        
         # Use tk.Label
         tk.Label(
             header_frame,
@@ -2482,7 +3057,7 @@ class ModernBloodBankSystem:
             bg=self.colors['bg_dark'],
             fg=self.colors['text'],
             pady=20
-        ).pack(side='left')
+        ).pack(side='left', padx=20)
         
         ttk.Button(
             header_frame,
@@ -2620,15 +3195,27 @@ class ModernBloodBankSystem:
         main_frame = ttk.Frame(reset_window, style='Modern.TFrame')
         main_frame.pack(fill='both', expand=True, padx=30, pady=30)
         
+        # Header frame
+        header_frame = ttk.Frame(main_frame, style='Modern.TFrame')
+        header_frame.pack(fill='x', pady=(0, 20))
+        
+        # Back button
+        ttk.Button(
+            header_frame,
+            text="← Back",
+            style='Secondary.TButton',
+            command=reset_window.destroy
+        ).pack(side='left', pady=5, padx=5)
+        
         # Use tk.Label
         tk.Label(
-            main_frame,
+            header_frame,
             text="Reset Password",
             font=('Segoe UI', 32, 'bold'),
             bg=self.colors['bg_dark'],
             fg=self.colors['text'],
             pady=20
-        ).pack(pady=(0, 20))
+        ).pack(side='left', padx=20)
         
         # Form fields
         fields = [
@@ -2683,15 +3270,27 @@ class ModernBloodBankSystem:
         main_frame = ttk.Frame(report_window, style='Modern.TFrame')
         main_frame.pack(fill='both', expand=True, padx=30, pady=30)
         
+        # Header frame
+        header_frame = ttk.Frame(main_frame, style='Modern.TFrame')
+        header_frame.pack(fill='x', pady=(0, 20))
+        
+        # Back button
+        ttk.Button(
+            header_frame,
+            text="← Back",
+            style='Secondary.TButton',
+            command=report_window.destroy
+        ).pack(side='left', pady=5, padx=5)
+        
         # Use tk.Label
         tk.Label(
-            main_frame,
+            header_frame,
             text="Generate Report",
             font=('Segoe UI', 32, 'bold'),
             bg=self.colors['bg_dark'],
             fg=self.colors['text'],
             pady=20
-        ).pack(pady=(0, 20))
+        ).pack(side='left', padx=20)
         
         # Date range selection
         date_frame = ttk.Frame(main_frame, style='Card.TFrame')
@@ -2816,15 +3415,27 @@ class ModernBloodBankSystem:
         main_frame = ttk.Frame(user_window, style='Modern.TFrame')
         main_frame.pack(fill='both', expand=True, padx=30, pady=30)
         
-        # Use tk.Label instead of ttk.Label
+        # Header frame
+        header_frame = ttk.Frame(main_frame, style='Modern.TFrame')
+        header_frame.pack(fill='x', pady=(0, 20))
+        
+        # Back button
+        ttk.Button(
+            header_frame,
+            text="← Back",
+            style='Secondary.TButton',
+            command=user_window.destroy
+        ).pack(side='left', pady=5, padx=5)
+        
+        # Use tk.Label
         tk.Label(
-            main_frame,
+            header_frame,
             text="Add New User",
             font=('Segoe UI', 32, 'bold'),
             bg=self.colors['bg_dark'],
             fg=self.colors['text'],
             pady=20
-        ).pack(pady=(0, 20))
+        ).pack(side='left', padx=20)
         
         # Form fields
         fields = [
@@ -3188,6 +3799,10 @@ class ModernBloodBankSystem:
             f"Exporting {report_type} to Excel for {start_date} to {end_date}"
         )
 
+    def logout(self):
+        self.current_user = None
+        self.show_login_screen()
+    
     def run(self):
         """Start the Tkinter main event loop"""
         self.root.mainloop()
