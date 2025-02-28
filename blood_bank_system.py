@@ -865,17 +865,19 @@ class ModernBloodBankSystem:
         stats_frame = ttk.Frame(parent, style='Modern.TFrame')
         stats_frame.pack(fill='x', pady=(0, 20))
         
-        # Fetch statistics
+        # Enhanced stats query to get more dynamic data
         self.cursor.execute("""
             SELECT 
                 (SELECT COUNT(*) FROM Donors WHERE DATE(donation_date) = CURDATE()) as today_donations,
                 (SELECT COUNT(*) FROM Requests WHERE DATE(request_date) = CURDATE()) as today_requests,
                 (SELECT COUNT(*) FROM BloodBank WHERE units_available < 10) as low_inventory,
-                (SELECT COUNT(*) FROM Requests WHERE status = 'Pending') as pending_requests
+                (SELECT COUNT(*) FROM Requests WHERE status = 'Pending') as pending_requests,
+                (SELECT SUM(units_available) FROM BloodBank) as total_blood_units,
+                (SELECT COUNT(*) FROM Donors) as total_donors
         """)
         stats = self.cursor.fetchone()
         
-        # Create stat cards
+        # Create stat cards with dynamic data
         stat_cards = [
             ("Today's Donations", stats[0], "💉", self.colors['success']),
             ("Today's Requests", stats[1], "📝", self.colors['warning']),
@@ -985,11 +987,12 @@ class ModernBloodBankSystem:
         for i in range(2):
             blood_types_frame.grid_rowconfigure(i, weight=1)
             
+            
     def show_donation_history(self):
         # Create a top-level window for donation history
         history_window = tk.Toplevel(self.root)
         history_window.title("Donation History")
-        history_window.geometry("800x600")
+        history_window.geometry("1000x700")
         history_window.configure(bg=self.colors['bg_dark'])
         
         main_frame = ttk.Frame(history_window, style='Modern.TFrame')
@@ -1017,8 +1020,78 @@ class ModernBloodBankSystem:
             pady=20
         ).pack(side='left', padx=20)
         
+        # Add date filter
+        filter_frame = ttk.Frame(main_frame, style='Card.TFrame')
+        filter_frame.pack(fill='x', pady=(0, 20))
+        
+        # Date range filter
+        tk.Label(
+            filter_frame,
+            text="Date Range:",
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
+        ).pack(side='left', padx=10)
+        
+        # Date range options
+        range_options = ["All Time", "Last 30 Days", "Last 3 Months", "Last Year"]
+        date_range_var = tk.StringVar(value="All Time")
+        
+        range_combo = ttk.Combobox(
+            filter_frame,
+            textvariable=date_range_var,
+            values=range_options,
+            state='readonly',
+            font=('Segoe UI', 11)
+        )
+        range_combo.pack(side='left', padx=10)
+        
+        # Blood group filter
+        tk.Label(
+            filter_frame,
+            text="Blood Group:",
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
+        ).pack(side='left', padx=10)
+        
+        # Blood group options
+        blood_options = ["All"] + ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
+        blood_group_var = tk.StringVar(value="All")
+        
+        blood_combo = ttk.Combobox(
+            filter_frame,
+            textvariable=blood_group_var,
+            values=blood_options,
+            state='readonly',
+            font=('Segoe UI', 11)
+        )
+        blood_combo.pack(side='left', padx=10)
+        
+        # Apply filter button
+        ttk.Button(
+            filter_frame,
+            text="Apply Filter",
+            style='Modern.TButton',
+            command=lambda: self.refresh_donation_history(tree, date_range_var.get(), blood_group_var.get())
+        ).pack(side='left', padx=10)
+        
+        # Export button
+        ttk.Button(
+            filter_frame,
+            text="Export to CSV",
+            style='Modern.TButton',
+            command=lambda: self.export_donation_history(tree, date_range_var.get(), blood_group_var.get())
+        ).pack(side='right', padx=10)
+        
+        # Stats frame
+        stats_frame = ttk.Frame(main_frame, style='Card.TFrame')
+        stats_frame.pack(fill='x', pady=(0, 20))
+        
         # Create a treeview to display donation history
-        columns = ('id', 'donor', 'blood_group', 'date', 'units', 'status')
+        columns = ('id', 'donor', 'blood_group', 'date', 'units', 'status', 'time_slot', 'notes')
         tree = ttk.Treeview(main_frame, columns=columns, show='headings')
         
         # Define column headings
@@ -1028,14 +1101,18 @@ class ModernBloodBankSystem:
         tree.heading('date', text='Donation Date')
         tree.heading('units', text='Units')
         tree.heading('status', text='Status')
+        tree.heading('time_slot', text='Time Slot')
+        tree.heading('notes', text='Notes')
         
         # Set column widths
         tree.column('id', width=50)
         tree.column('donor', width=150)
-        tree.column('blood_group', width=100)
-        tree.column('date', width=120)
-        tree.column('units', width=80)
-        tree.column('status', width=100)
+        tree.column('blood_group', width=80)
+        tree.column('date', width=100)
+        tree.column('units', width=50)
+        tree.column('status', width=80)
+        tree.column('time_slot', width=120)
+        tree.column('notes', width=200)
         
         # Add a scrollbar
         scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=tree.yview)
@@ -1045,26 +1122,190 @@ class ModernBloodBankSystem:
         tree.pack(side='left', fill='both', expand=True)
         scrollbar.pack(side='right', fill='y')
         
+        # Initial load of data
+        self.refresh_donation_history(tree, "All Time", "All")
+        
+        # Bind double-click event to show donation details
+        tree.bind('<Double-1>', lambda e: self.show_donation_details(tree))
+        
+        
+    def refresh_donation_history(self, tree, date_range, blood_group):
+        # Clear existing data
+        for item in tree.get_children():
+            tree.delete(item)
+        
+        # Prepare date filter
+        today = date.today()
+        date_clause = ""
+        date_params = []
+        
+        if date_range == "Last 30 Days":
+            date_clause = "AND d.donation_date >= %s"
+            date_params.append(today - timedelta(days=30))
+        elif date_range == "Last 3 Months":
+            date_clause = "AND d.donation_date >= %s"
+            date_params.append(today - timedelta(days=90))
+        elif date_range == "Last Year":
+            date_clause = "AND d.donation_date >= %s"
+            date_params.append(today - timedelta(days=365))
+        
+        # Prepare blood group filter
+        blood_clause = ""
+        if blood_group != "All":
+            blood_clause = "AND d.blood_group = %s"
+            date_params.append(blood_group)
+        
         # Fetch donation history from database
         try:
-            self.cursor.execute("""
-                SELECT d.id, d.name, d.blood_group, d.donation_date, 
-                    ds.id, ds.status
+            query = f"""
+                SELECT ds.id, d.name, d.blood_group, d.donation_date, 
+                    ds.status, ds.time_slot, ds.notes
                 FROM Donors d
                 JOIN DonationSchedule ds ON d.id = ds.donor_id
-                WHERE ds.status = 'Completed'
+                WHERE ds.status = 'Completed' {date_clause} {blood_clause}
                 ORDER BY d.donation_date DESC
-            """)
+            """
+            
+            self.cursor.execute(query, date_params)
             
             for row in self.cursor.fetchall():
                 # Format date
                 date_str = row[3].strftime("%Y-%m-%d")
-                # Default units to 1 (you might want to adjust this)
+                # Default units to 1
                 units = 1
-                tree.insert('', 'end', values=(row[4], row[1], row[2], date_str, units, row[5]))
+                time_slot = row[5] if row[5] else "N/A"
+                notes = row[6] if row[6] else ""
                 
+                tree.insert('', 'end', values=(row[0], row[1], row[2], date_str, units, row[4], time_slot, notes))
+                    
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load donation history: {str(e)}")
+        
+    def show_donation_details(self, tree):
+        try:
+            # Get selected item
+            selection = tree.selection()[0]
+            values = tree.item(selection, 'values')
+            
+            if not values:
+                return
+            
+            donation_id = values[0]
+            
+            # Create details window
+            details_window = tk.Toplevel(self.root)
+            details_window.title(f"Donation Details - ID: {donation_id}")
+            details_window.geometry("600x500")
+            details_window.configure(bg=self.colors['bg_dark'])
+            
+            # Main frame
+            main_frame = ttk.Frame(details_window, style='Modern.TFrame')
+            main_frame.pack(fill='both', expand=True, padx=30, pady=30)
+            
+            # Header
+            tk.Label(
+                main_frame,
+                text=f"Donation Details",
+                font=('Segoe UI', 24, 'bold'),
+                bg=self.colors['bg_dark'],
+                fg=self.colors['text'],
+                pady=10
+            ).pack(fill='x')
+            
+            # Details card
+            details_frame = ttk.Frame(main_frame, style='Card.TFrame')
+            details_frame.pack(fill='x', pady=20)
+            
+            # Query additional details
+            self.cursor.execute("""
+                SELECT d.id, d.name, d.blood_group, d.age, d.contact_info, d.email,
+                    d.address, d.donation_date, ds.time_slot, ds.status, ds.notes
+                FROM Donors d
+                JOIN DonationSchedule ds ON d.id = ds.donor_id
+                WHERE ds.id = %s
+            """, (donation_id,))
+            
+            row = self.cursor.fetchone()
+            if row:
+                # Display all details
+                details = [
+                    ("Donor ID", row[0]),
+                    ("Donor Name", row[1]),
+                    ("Blood Group", row[2]),
+                    ("Age", row[3]),
+                    ("Contact", row[4]),
+                    ("Email", row[5] if row[5] else "N/A"),
+                    ("Address", row[6] if row[6] else "N/A"),
+                    ("Donation Date", row[7].strftime("%Y-%m-%d")),
+                    ("Time Slot", row[8] if row[8] else "N/A"),
+                    ("Status", row[9]),
+                    ("Notes", row[10] if row[10] else "N/A")
+                ]
+                
+                for label, value in details:
+                    detail_frame = ttk.Frame(details_frame, style='Card.TFrame')
+                    detail_frame.pack(fill='x', padx=20, pady=5)
+                    
+                    # Label
+                    tk.Label(
+                        detail_frame,
+                        text=label + ":",
+                        font=('Segoe UI', 14, 'bold'),
+                        bg=self.colors['card_bg'],
+                        fg=self.colors['text'],
+                        width=15,
+                        anchor='w'
+                    ).pack(side='left', padx=(0, 10))
+                    
+                    # Value
+                    tk.Label(
+                        detail_frame,
+                        text=str(value),
+                        font=('Segoe UI', 14),
+                        bg=self.colors['card_bg'],
+                        fg=self.colors['text_secondary'],
+                        wraplength=350,
+                        anchor='w'
+                    ).pack(side='left', fill='x', expand=True)
+            
+            # Close button
+            ttk.Button(
+                main_frame,
+                text="Close",
+                style='Modern.TButton',
+                command=details_window.destroy
+            ).pack(pady=20)
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to show donation details: {str(e)}")
+    
+    def export_donation_history(self, tree, date_range, blood_group):
+        try:
+            # Create reports directory if it doesn't exist
+            reports_dir = "reports"
+            if not os.path.exists(reports_dir):
+                os.makedirs(reports_dir)
+            
+            # Generate filename
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = os.path.join(reports_dir, f"donation_history_{timestamp}.csv")
+            
+            with open(filename, 'w', newline='') as file:
+                file.write("ID,Donor Name,Blood Group,Donation Date,Units,Status,Time Slot,Notes\n")
+                
+                for item_id in tree.get_children():
+                    values = tree.item(item_id, 'values')
+                    # Escape quotes in values
+                    escaped_values = [f'"{str(v).replace(chr(34), chr(34)+chr(34))}"' for v in values]
+                    file.write(','.join(escaped_values) + '\n')
+            
+            # Open the file
+            os.startfile(filename) if os.name == 'nt' else os.system(f'xdg-open "{filename}"')
+            
+            messagebox.showinfo("Export Successful", f"Donation history exported to {filename}")
+        
+        except Exception as e:
+            messagebox.showerror("Export Error", f"Failed to export donation history: {str(e)}")
         
     def show_request_form(self, blood_type=None):
         request_window = tk.Toplevel(self.root)
@@ -1265,6 +1506,10 @@ class ModernBloodBankSystem:
             messagebox.showinfo("Success", "Blood request submitted successfully!")
             window.destroy()
             
+            # Refresh blood requests view if currently displayed
+            if hasattr(self, 'request_tree'):
+                self.refresh_requests()
+        
         except Exception as e:
             self.db.rollback()
             messagebox.showerror("Error", str(e))
@@ -1274,7 +1519,7 @@ class ModernBloodBankSystem:
         card = ttk.Frame(parent, style='Card.TFrame')
         card.grid(row=index//4, column=index%4, padx=10, pady=10, sticky='nsew')
         
-        # Get inventory data
+        # Get inventory data - Using a fresh query for each card
         self.cursor.execute(
             "SELECT units_available FROM BloodBank WHERE blood_group = %s",
             (blood_type,)
@@ -1361,10 +1606,27 @@ class ModernBloodBankSystem:
             return "✅ Sufficient"
 
     def refresh_inventory(self):
-        for widget in self.main_container.winfo_children():
-            if isinstance(widget, ttk.Frame) and widget.winfo_name() != 'sidebar':
+            # Clear main container
+            for widget in self.main_container.winfo_children():
                 widget.destroy()
-        self.show_blood_inventory(self.main_container)
+            
+            # Create frame for the blood inventory
+            content_frame = ttk.Frame(self.main_container, style='Modern.TFrame')
+            content_frame.pack(fill='both', expand=True)
+            
+            # Add back button at the top
+            back_frame = ttk.Frame(content_frame, style='Modern.TFrame')
+            back_frame.pack(fill='x', pady=(0, 10))
+            
+            ttk.Button(
+                back_frame,
+                text="← Back to Dashboard",
+                style='Secondary.TButton',
+                command=self.show_dashboard
+            ).pack(side='left', pady=5, padx=5)
+            
+            # Show the blood inventory
+            self.show_blood_inventory(content_frame)
         
     def show_donor_registration(self):
         registration_window = tk.Toplevel(self.root)
@@ -1679,6 +1941,9 @@ class ModernBloodBankSystem:
             # If all tabs are valid, save the donor
             self.save_donor_to_database(window)
             
+            # After successful save, refresh dashboard
+            self.show_dashboard()
+            
         except ValueError as e:
             messagebox.showerror("Validation Error", str(e))
         except Exception as e:
@@ -1765,9 +2030,20 @@ class ModernBloodBankSystem:
                 self.schedule_notes.get("1.0", tk.END).strip()
             ))
             
+            # Update blood bank inventory - add 1 unit for the donation
+            blood_group = self.personal_entries['blood_group'].get()
+            self.cursor.execute("""
+                UPDATE BloodBank 
+                SET units_available = units_available + 1
+                WHERE blood_group = %s
+            """, (blood_group,))
+            
             self.db.commit()
             messagebox.showinfo("Success", "Donor registered successfully!")
             window.destroy()
+            
+            # Refresh dashboard after donor registration to show updated stats
+            self.show_dashboard()
             
         except Exception as e:
             self.db.rollback()
@@ -2057,7 +2333,7 @@ class ModernBloodBankSystem:
             ORDER BY request_date DESC
         """
         
-        search_pattern = f"%{search_term}%"
+        search_pattern = f"%{search_term}%" if search_term else "%"
         self.cursor.execute(query, (
             status_filter, status_filter,
             search_pattern, search_pattern, search_pattern
@@ -2128,6 +2404,15 @@ class ModernBloodBankSystem:
         
         # Create action buttons
         self.create_request_action_buttons(main_frame, request)
+        
+        # Add Edit button
+        edit_button = ttk.Button(
+            main_frame,
+            text="✏️ Edit Request",
+            style='Modern.TButton',
+            command=lambda: self.show_edit_request_form(request_id, details_window)
+        )
+        edit_button.pack(fill='x', pady=10)
 
     def create_request_detail_card(self, parent, request):
         card = ttk.Frame(parent, style='Card.TFrame')
@@ -2543,8 +2828,432 @@ class ModernBloodBankSystem:
         else:  # Last Year
             return today - timedelta(days=365)
 
+   
+    def show_edit_request_form(self, request_id, parent_window):
+    # Fetch the current request data
+        self.cursor.execute("""
+            SELECT * FROM Requests WHERE id = %s
+        """, (request_id,))
+        request = self.cursor.fetchone()
+        
+        edit_window = tk.Toplevel(self.root)
+        edit_window.title("Edit Request")
+        edit_window.geometry("600x700")
+        edit_window.configure(bg=self.colors['bg_dark'])
+        
+        main_frame = ttk.Frame(edit_window, style='Modern.TFrame')
+        main_frame.pack(fill='both', expand=True, padx=30, pady=30)
+        
+        # Header frame
+        header_frame = ttk.Frame(main_frame, style='Modern.TFrame')
+        header_frame.pack(fill='x', pady=(0, 20))
+        
+        # Back button
+        ttk.Button(
+            header_frame,
+            text="← Back",
+            style='Secondary.TButton',
+            command=edit_window.destroy
+        ).pack(side='left', pady=5, padx=5)
+        
+        # Add header
+        tk.Label(
+            header_frame,
+            text=f"Edit Request #{request_id}",
+            font=('Segoe UI', 32, 'bold'),
+            bg=self.colors['bg_dark'],
+            fg=self.colors['text'],
+            pady=20
+        ).pack(side='left', padx=20)
+        
+        # Form container
+        form_frame = ttk.Frame(main_frame, style='Card.TFrame')
+        form_frame.pack(fill='x', pady=10)
+        
+        # Hospital name
+        hospital_frame = ttk.Frame(form_frame, style='Card.TFrame')
+        hospital_frame.pack(fill='x', padx=20, pady=10)
+        
+        tk.Label(
+            hospital_frame,
+            text="Hospital Name*",
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
+        ).pack(anchor='w')
+        
+        hospital_var = tk.StringVar(value=request[1])  # Pre-fill with current value
+        hospital_entry = ttk.Entry(
+            hospital_frame,
+            textvariable=hospital_var,
+            font=('Segoe UI', 12),
+            style='Modern.TEntry'
+        )
+        hospital_entry.pack(fill='x', pady=(5, 0))
+        
+        # Blood type
+        blood_type_frame = ttk.Frame(form_frame, style='Card.TFrame')
+        blood_type_frame.pack(fill='x', padx=20, pady=10)
+        
+        tk.Label(
+            blood_type_frame,
+            text="Blood Type*",
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
+        ).pack(anchor='w')
+        
+        blood_type_var = tk.StringVar(value=request[2])  # Pre-fill with current value
+        blood_type_combo = ttk.Combobox(
+            blood_type_frame,
+            textvariable=blood_type_var,
+            values=['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
+            state='readonly',
+            font=('Segoe UI', 12)
+        )
+        blood_type_combo.pack(fill='x', pady=(5, 0))
+        
+        # Units
+        units_frame = ttk.Frame(form_frame, style='Card.TFrame')
+        units_frame.pack(fill='x', padx=20, pady=10)
+        
+        tk.Label(
+            units_frame,
+            text="Units Required*",
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
+        ).pack(anchor='w')
+        
+        units_var = tk.StringVar(value=str(request[3]))  # Pre-fill with current value
+        units_entry = ttk.Entry(
+            units_frame,
+            textvariable=units_var,
+            font=('Segoe UI', 12),
+            style='Modern.TEntry'
+        )
+        units_entry.pack(fill='x', pady=(5, 0))
+        
+        # Priority
+        priority_frame = ttk.Frame(form_frame, style='Card.TFrame')
+        priority_frame.pack(fill='x', padx=20, pady=10)
+        
+        tk.Label(
+            priority_frame,
+            text="Priority*",
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
+        ).pack(anchor='w')
+        
+        priority_var = tk.StringVar(value=request[5])  # Pre-fill with current value
+        for priority in ['Normal', 'Urgent', 'Emergency']:
+            ttk.Radiobutton(
+                priority_frame,
+                text=priority,
+                variable=priority_var,
+                value=priority,
+                style='Modern.TRadiobutton'
+            ).pack(anchor='w', pady=5)
+        
+        # Status
+        status_frame = ttk.Frame(form_frame, style='Card.TFrame')
+        status_frame.pack(fill='x', padx=20, pady=10)
+        
+        tk.Label(
+            status_frame,
+            text="Status*",
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
+        ).pack(anchor='w')
+        
+        status_var = tk.StringVar(value=request[6])  # Pre-fill with current value
+        for status in ['Pending', 'Approved', 'Rejected']:
+            ttk.Radiobutton(
+                status_frame,
+                text=status,
+                variable=status_var,
+                value=status,
+                style='Modern.TRadiobutton'
+            ).pack(anchor='w', pady=5)
+        
+        # Notes
+        notes_frame = ttk.Frame(form_frame, style='Card.TFrame')
+        notes_frame.pack(fill='x', padx=20, pady=10)
+        
+        tk.Label(
+            notes_frame,
+            text="Additional Notes",
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
+        ).pack(anchor='w')
+        
+        notes_text = tk.Text(
+            notes_frame,
+            height=4,
+            font=('Segoe UI', 12),
+            bg=self.colors['bg_light'],
+            fg=self.colors['text'],
+            insertbackground=self.colors['text']
+        )
+        notes_text.pack(fill='x', pady=(5, 0))
+        # Pre-fill with current notes if any
+        if request[7]:
+            notes_text.insert("1.0", request[7])
+        
+        # Buttons
+        button_frame = ttk.Frame(main_frame, style='Modern.TFrame')
+        button_frame.pack(fill='x', pady=20)
+        
+        ttk.Button(
+            button_frame,
+            text="Cancel",
+            style='Secondary.TButton',
+            command=edit_window.destroy
+        ).pack(side='left', padx=5)
+        
+        ttk.Button(
+            button_frame,
+            text="Save Changes",
+            style='Modern.TButton',
+            command=lambda: self.update_request(
+                request_id,
+                hospital_var.get(),
+                blood_type_var.get(),
+                units_var.get(),
+                priority_var.get(),
+                status_var.get(),
+                notes_text.get("1.0", tk.END).strip(),
+                edit_window,
+                parent_window
+            )
+        ).pack(side='right', padx=5)
+
+
+    def update_request(self, request_id, hospital, blood_type, units, priority, status, notes, edit_window, parent_window=None):
+        try:
+            # Validate inputs
+            if not all([hospital, blood_type, units]):
+                raise ValueError("Please fill in all required fields")
+            
+            try:
+                units = int(units)
+                if units <= 0:
+                    raise ValueError
+            except ValueError:
+                raise ValueError("Please enter a valid number of units")
+            
+            # Get the original request data for comparison
+            self.cursor.execute("""
+                SELECT blood_group, units_requested, status 
+                FROM Requests 
+                WHERE id = %s
+            """, (request_id,))
+            original = self.cursor.fetchone()
+            orig_blood_group, orig_units, orig_status = original
+            
+            # Begin transaction
+            self.cursor.execute("START TRANSACTION")
+            
+            # Update request in database
+            self.cursor.execute("""
+                UPDATE Requests 
+                SET hospital_name = %s, blood_group = %s, units_requested = %s,
+                    priority = %s, status = %s, notes = %s
+                WHERE id = %s
+            """, (hospital, blood_type, units, priority, status, notes, request_id))
+            
+            # Handle status changes from Pending to Approved or Rejected
+            if orig_status != status:
+                if status == 'Approved' and orig_status != 'Approved':
+                    # If approved, decrease blood bank inventory
+                    self.cursor.execute("""
+                        UPDATE BloodBank
+                        SET units_available = units_available - %s
+                        WHERE blood_group = %s
+                    """, (units, blood_type))
+                elif orig_status == 'Approved' and status != 'Approved':
+                    # If un-approving, restore the blood bank inventory
+                    self.cursor.execute("""
+                        UPDATE BloodBank
+                        SET units_available = units_available + %s
+                        WHERE blood_group = %s
+                    """, (orig_units, orig_blood_group))
+            
+            # If still approved but changed units or blood type
+            elif status == 'Approved' and orig_status == 'Approved':
+                if blood_type != orig_blood_group:
+                    # Different blood group - restore original and reduce new
+                    self.cursor.execute("""
+                        UPDATE BloodBank
+                        SET units_available = units_available + %s
+                        WHERE blood_group = %s
+                    """, (orig_units, orig_blood_group))
+                    
+                    self.cursor.execute("""
+                        UPDATE BloodBank
+                        SET units_available = units_available - %s
+                        WHERE blood_group = %s
+                    """, (units, blood_type))
+                elif units != orig_units:
+                    # Same blood group but different units
+                    difference = orig_units - units
+                    self.cursor.execute("""
+                        UPDATE BloodBank
+                        SET units_available = units_available + %s
+                        WHERE blood_group = %s
+                    """, (difference, blood_type))
+            
+            self.db.commit()
+            messagebox.showinfo("Success", "Request updated successfully!")
+            
+            # Close windows
+            edit_window.destroy()
+            if parent_window:
+                parent_window.destroy()
+            
+            # Refresh the requests view and dashboard
+            self.refresh_requests()
+            self.show_dashboard()
+            
+        except Exception as e:
+            self.db.rollback()
+            messagebox.showerror("Error", str(e))
+
+
+    def save_donation(self, blood_type, units, donor, notes, window):
+        try:
+            if not all([blood_type, units, donor]):
+                raise ValueError("Please fill in all required fields")
+            
+            try:
+                units = int(units)
+                if units <= 0:
+                    raise ValueError
+            except ValueError:
+                raise ValueError("Please enter a valid number of units")
+            
+            # Extract donor ID
+            donor_id = int(donor.split(" - ")[0])
+            
+            # Begin transaction
+            self.cursor.execute("START TRANSACTION")
+            
+            # Update blood bank inventory
+            self.cursor.execute("""
+                UPDATE BloodBank 
+                SET units_available = units_available + %s 
+                WHERE blood_group = %s
+            """, (units, blood_type))
+            
+            # Record donation
+            self.cursor.execute("""
+                UPDATE Donors 
+                SET donation_date = CURDATE()
+                WHERE id = %s
+            """, (donor_id,))
+            
+            # Add to donation schedule
+            self.cursor.execute("""
+                INSERT INTO DonationSchedule (
+                    donor_id, scheduled_date, time_slot, status, notes
+                ) VALUES (%s, CURDATE(), NOW(), 'Completed', %s)
+            """, (donor_id, notes))
+            
+            self.db.commit()
+            messagebox.showinfo("Success", "Donation recorded successfully!")
+            window.destroy()
+            
+            # Refresh dashboard to reflect changes
+            self.show_dashboard()
+            
+        except Exception as e:
+            self.db.rollback()
+            messagebox.showerror("Error", str(e))
+
     def update_analytics(self, event=None):
-        self.show_analytics()
+        """Refresh all analytics charts based on current date range"""
+        for widget in self.main_container.winfo_children():
+            widget.destroy()
+                    
+        main_frame = ttk.Frame(self.main_container, style='Modern.TFrame')
+        main_frame.pack(fill='both', expand=True)
+        
+        # Header
+        header_frame = ttk.Frame(main_frame, style='Modern.TFrame')
+        header_frame.pack(fill='x', pady=(0, 20))
+        
+        # Back button
+        ttk.Button(
+            header_frame,
+            text="← Back to Dashboard",
+            style='Secondary.TButton',
+            command=self.show_dashboard
+        ).pack(side='left', padx=10, pady=5)
+        
+        # Title
+        tk.Label(
+            header_frame,
+            text="Analytics Dashboard",
+            font=('Segoe UI', 32, 'bold'),
+            bg=self.colors['bg_dark'],
+            fg=self.colors['text'],
+            pady=20
+        ).pack(side='left', padx=20)
+        
+        # Create date range selector
+        date_range_frame = ttk.Frame(header_frame, style='Card.TFrame')
+        date_range_frame.pack(side='right')
+        
+        # Use tk.Label
+        tk.Label(
+            date_range_frame,
+            text="Date Range:",
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
+        ).pack(side='left', padx=(0, 10))
+        
+        ranges = ['Last 7 Days', 'Last 30 Days', 'Last 3 Months', 'Last Year']
+        self.date_range_var = tk.StringVar(value='Last 30 Days')
+        
+        range_combo = ttk.Combobox(
+            date_range_frame,
+            textvariable=self.date_range_var,
+            values=ranges,
+            state='readonly',
+            style='Modern.TCombobox'
+        )
+        range_combo.pack(side='left')
+        range_combo.bind('<<ComboboxSelected>>', lambda e: self.update_analytics())
+        
+        # Create charts grid
+        charts_frame = ttk.Frame(main_frame, style='Modern.TFrame')
+        charts_frame.pack(fill='both', expand=True)
+        
+        # Configure grid
+        for i in range(2):
+            charts_frame.grid_columnconfigure(i, weight=1)
+            charts_frame.grid_rowconfigure(i, weight=1)
+        
+        # Create overview stats
+        stats_frame = ttk.Frame(main_frame, style='Modern.TFrame')
+        stats_frame.pack(fill='x', pady=(0, 20))
+        
+        # Create charts with real data
+        self.create_donation_trend_chart(charts_frame, 0, 0)
+        self.create_blood_type_distribution_chart(charts_frame, 0, 1)
+        self.create_request_status_chart(charts_frame, 1, 0)
+        self.create_inventory_levels_chart(charts_frame, 1, 1)
 
 
     def show_settings(self):
@@ -3785,19 +4494,259 @@ class ModernBloodBankSystem:
     def generate_pdf_report(self, start_date, end_date, report_type):
         start_date = start_date.get_date()  # Get date from ModernCalendar
         end_date = end_date.get_date()      # Get date from ModernCalendar
-        messagebox.showinfo(
-            "Report Generation",
-            f"Generating {report_type} PDF report for {start_date} to {end_date}"
-        )
+        
+        try:
+            # Create a reports directory if it doesn't exist
+            reports_dir = "reports"
+            if not os.path.exists(reports_dir):
+                os.makedirs(reports_dir)
+                
+            # Generate filename with full path
+            filename = os.path.join(reports_dir, f"{report_type}_report_{start_date}_to_{end_date}.txt")
+            
+            # Fetch data based on report type
+            if report_type == "donation":
+                self.cursor.execute("""
+                    SELECT d.name, d.blood_group, d.donation_date, d.contact_info
+                    FROM Donors d
+                    WHERE d.donation_date BETWEEN %s AND %s
+                    ORDER BY d.donation_date
+                """, (start_date, end_date))
+                
+                data = self.cursor.fetchall()
+                
+                # Write to a text file (simplified version of a PDF)
+                with open(filename, 'w') as file:
+                    file.write(f"Blood Bank Management System - Donation Report\n")
+                    file.write(f"Report Period: {start_date} to {end_date}\n")
+                    file.write(f"Generated On: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                    file.write("-" * 80 + "\n\n")
+                    file.write("{:<30} {:<10} {:<15} {:<25}\n".format(
+                        "Donor Name", "Blood Type", "Donation Date", "Contact"))
+                    file.write("-" * 80 + "\n")
+                    
+                    for row in data:
+                        date_str = row[2].strftime("%Y-%m-%d")
+                        file.write("{:<30} {:<10} {:<15} {:<25}\n".format(
+                            row[0], row[1], date_str, row[3]))
+                    
+                    file.write("\n" + "-" * 80 + "\n")
+                    file.write(f"Total Donations: {len(data)}\n")
+                    
+            elif report_type == "inventory":
+                self.cursor.execute("""
+                    SELECT blood_group, units_available, last_updated
+                    FROM BloodBank
+                    ORDER BY blood_group
+                """)
+                
+                data = self.cursor.fetchall()
+                
+                with open(filename, 'w') as file:
+                    file.write(f"Blood Bank Management System - Inventory Report\n")
+                    file.write(f"Report Period: {start_date} to {end_date}\n")
+                    file.write(f"Generated On: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                    file.write("-" * 80 + "\n\n")
+                    file.write("{:<15} {:<20} {:<30}\n".format(
+                        "Blood Type", "Units Available", "Last Updated"))
+                    file.write("-" * 80 + "\n")
+                    
+                    total_units = 0
+                    for row in data:
+                        update_str = row[2].strftime("%Y-%m-%d %H:%M:%S") if row[2] else "N/A"
+                        file.write("{:<15} {:<20} {:<30}\n".format(
+                            row[0], row[1], update_str))
+                        total_units += row[1]
+                    
+                    file.write("\n" + "-" * 80 + "\n")
+                    file.write(f"Total Blood Units Available: {total_units}\n")
+            
+            elif report_type == "requests":
+                self.cursor.execute("""
+                    SELECT hospital_name, blood_group, units_requested, request_date, 
+                        priority, status, notes
+                    FROM Requests
+                    WHERE request_date BETWEEN %s AND %s
+                    ORDER BY request_date DESC
+                """, (start_date, end_date))
+                
+                data = self.cursor.fetchall()
+                
+                with open(filename, 'w') as file:
+                    file.write(f"Blood Bank Management System - Blood Requests Report\n")
+                    file.write(f"Report Period: {start_date} to {end_date}\n")
+                    file.write(f"Generated On: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                    file.write("-" * 100 + "\n\n")
+                    file.write("{:<30} {:<10} {:<10} {:<15} {:<15} {:<15}\n".format(
+                        "Hospital", "Blood Type", "Units", "Date", "Priority", "Status"))
+                    file.write("-" * 100 + "\n")
+                    
+                    total_requests = 0
+                    approved_count = 0
+                    pending_count = 0
+                    rejected_count = 0
+                    
+                    for row in data:
+                        date_str = row[3].strftime("%Y-%m-%d")
+                        file.write("{:<30} {:<10} {:<10} {:<15} {:<15} {:<15}\n".format(
+                            row[0], row[1], row[2], date_str, row[4], row[5]))
+                        
+                        if row[6]:  # Notes
+                            file.write(f"Notes: {row[6]}\n")
+                            file.write("-" * 100 + "\n")
+                        
+                        total_requests += 1
+                        if row[5] == 'Approved':
+                            approved_count += 1
+                        elif row[5] == 'Pending':
+                            pending_count += 1
+                        elif row[5] == 'Rejected':
+                            rejected_count += 1
+                    
+                    file.write("\n" + "-" * 100 + "\n")
+                    file.write(f"Total Requests: {total_requests}\n")
+                    file.write(f"Approved: {approved_count}\n")
+                    file.write(f"Pending: {pending_count}\n")
+                    file.write(f"Rejected: {rejected_count}\n")
+                    
+            elif report_type == "users":
+                self.cursor.execute("""
+                    SELECT username, role, email, last_login, created_at
+                    FROM Users
+                    ORDER BY created_at DESC
+                """)
+                
+                data = self.cursor.fetchall()
+                
+                with open(filename, 'w') as file:
+                    file.write(f"Blood Bank Management System - Users Activity Report\n")
+                    file.write(f"Report Period: {start_date} to {end_date}\n")
+                    file.write(f"Generated On: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                    file.write("-" * 100 + "\n\n")
+                    file.write("{:<20} {:<15} {:<30} {:<20} {:<20}\n".format(
+                        "Username", "Role", "Email", "Last Login", "Created At"))
+                    file.write("-" * 100 + "\n")
+                    
+                    for row in data:
+                        last_login = row[3].strftime("%Y-%m-%d %H:%M") if row[3] else "Never"
+                        created_at = row[4].strftime("%Y-%m-%d %H:%M") if row[4] else "Unknown"
+                        
+                        file.write("{:<20} {:<15} {:<30} {:<20} {:<20}\n".format(
+                            row[0], row[1], row[2], last_login, created_at))
+                    
+                    file.write("\n" + "-" * 100 + "\n")
+                    file.write(f"Total Users: {len(data)}\n")
+            
+            # Open the generated file
+            os.startfile(filename) if os.name == 'nt' else os.system(f'xdg-open "{filename}"')
+            
+            messagebox.showinfo("Report Generated", f"Report saved to {filename}\nThe file has been opened for you.")
+        
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to generate report: {str(e)}")
 
 
     def export_excel_report(self, start_date, end_date, report_type):
         start_date = start_date.get_date()  # Get date from ModernCalendar
         end_date = end_date.get_date()      # Get date from ModernCalendar
-        messagebox.showinfo(
-            "Report Export",
-            f"Exporting {report_type} to Excel for {start_date} to {end_date}"
-        )
+        
+        try:
+            # Create a reports directory if it doesn't exist
+            reports_dir = "reports"
+            if not os.path.exists(reports_dir):
+                os.makedirs(reports_dir)
+                
+            # Generate filename with full path
+            filename = os.path.join(reports_dir, f"{report_type}_report_{start_date}_to_{end_date}.csv")
+            
+            # Fetch data based on report type
+            if report_type == "donation":
+                self.cursor.execute("""
+                    SELECT d.name, d.blood_group, d.donation_date, d.contact_info, d.email,
+                        ds.time_slot, ds.status
+                    FROM Donors d
+                    LEFT JOIN DonationSchedule ds ON d.id = ds.donor_id
+                    WHERE d.donation_date BETWEEN %s AND %s
+                    ORDER BY d.donation_date
+                """, (start_date, end_date))
+                
+                data = self.cursor.fetchall()
+                
+                # Write to a CSV file (Excel compatible)
+                with open(filename, 'w', newline='') as file:
+                    file.write("Name,Blood Group,Donation Date,Contact,Email,Time Slot,Status\n")
+                    
+                    for row in data:
+                        # Format date
+                        date_str = row[2].strftime("%Y-%m-%d") if row[2] else ""
+                        email = row[4] if row[4] else ""
+                        time_slot = row[5] if row[5] else ""
+                        status = row[6] if row[6] else ""
+                        
+                        file.write(f'"{row[0]}","{row[1]}","{date_str}","{row[3]}","{email}","{time_slot}","{status}"\n')
+                        
+            elif report_type == "inventory":
+                self.cursor.execute("""
+                    SELECT blood_group, units_available, last_updated
+                    FROM BloodBank
+                    ORDER BY blood_group
+                """)
+                
+                data = self.cursor.fetchall()
+                
+                with open(filename, 'w', newline='') as file:
+                    file.write("Blood Group,Units Available,Last Updated\n")
+                    
+                    for row in data:
+                        update_str = row[2].strftime("%Y-%m-%d %H:%M:%S") if row[2] else ""
+                        file.write(f'"{row[0]}",{row[1]},"{update_str}"\n')
+            
+            elif report_type == "requests":
+                self.cursor.execute("""
+                    SELECT hospital_name, blood_group, units_requested, request_date, 
+                        priority, status, notes, created_at
+                    FROM Requests
+                    WHERE request_date BETWEEN %s AND %s
+                    ORDER BY request_date DESC
+                """, (start_date, end_date))
+                
+                data = self.cursor.fetchall()
+                
+                with open(filename, 'w', newline='') as file:
+                    file.write("Hospital,Blood Group,Units,Request Date,Priority,Status,Notes,Created At\n")
+                    
+                    for row in data:
+                        date_str = row[3].strftime("%Y-%m-%d") if row[3] else ""
+                        created_str = row[7].strftime("%Y-%m-%d %H:%M:%S") if row[7] else ""
+                        notes = row[6].replace('"', '""') if row[6] else ""  # Escape quotes for CSV
+                        
+                        file.write(f'"{row[0]}","{row[1]}",{row[2]},"{date_str}","{row[4]}","{row[5]}","{notes}","{created_str}"\n')
+            
+            elif report_type == "users":
+                self.cursor.execute("""
+                    SELECT username, role, email, last_login, created_at
+                    FROM Users
+                    ORDER BY created_at DESC
+                """)
+                
+                data = self.cursor.fetchall()
+                
+                with open(filename, 'w', newline='') as file:
+                    file.write("Username,Role,Email,Last Login,Created At\n")
+                    
+                    for row in data:
+                        last_login = row[3].strftime("%Y-%m-%d %H:%M") if row[3] else "Never"
+                        created_at = row[4].strftime("%Y-%m-%d %H:%M") if row[4] else ""
+                        
+                        file.write(f'"{row[0]}","{row[1]}","{row[2]}","{last_login}","{created_at}"\n')
+            
+            # Open the generated file with default spreadsheet application
+            os.startfile(filename) if os.name == 'nt' else os.system(f'xdg-open "{filename}"')
+            
+            messagebox.showinfo("Report Exported", f"Report exported to {filename}\nThe file has been opened for you.")
+        
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to export report: {str(e)}")
 
     def logout(self):
         self.current_user = None

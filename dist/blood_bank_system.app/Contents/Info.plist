@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDisplayName</key>
+	<string>blood_bank_system</string>
+	<key>CFBundleExecutable</key>
+	<string>blood_bank_system</string>
+	<key>CFBundleIconFile</key>
+	<string>generated-7e393ab33fd36c7059bc025dbe9fffd6aef104c6b09770ecb3ab9fc7e7de16bd.icns</string>
+	<key>CFBundleIdentifier</key>
+	<string>blood_bank_system</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>blood_bank_system</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>0.0.0</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+</dict>
+</plist>
