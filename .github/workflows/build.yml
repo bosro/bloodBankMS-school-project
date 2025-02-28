@@ -30,7 +30,7 @@ jobs:
         pyinstaller --onefile --windowed --icon=youricon.ico blood_bank_system.py
 
     - name: Upload EXE Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: blood_bank_system
         path: dist/blood_bank_system.exe
