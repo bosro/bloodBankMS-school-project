@@ -378,7 +378,7 @@ class ModernBloodBankSystem:
             self.db = mysql.connector.connect(
                 host="localhost",
                 user="bloodbank_user",
-                password="BloodBank@123",
+                password="Helbert@1",
                 database="blood_bank"
             )
             self.cursor = self.db.cursor(buffered=True)
@@ -808,10 +808,10 @@ class ModernBloodBankSystem:
         nav_buttons = [
             ("📊 Dashboard", self.show_dashboard, "Home dashboard"),
             ("➕ New Donor", self.show_donor_registration, "Register new donors"),
-            ("👥 Donors", self.show_donors_list, "View and manage donors"), 
+            ("👥 Donors", self.show_donors_list, "View and manage donors"),  # New Donors tab!
             ("📋 Requests", self.show_blood_requests, "Manage blood requests"),
-            ("📄 Reports", self.generate_report, "Generate reports"),
             ("📈 Analytics", self.show_analytics, "View analytics"),
+            ("📄 Reports", self.generate_report, "Generate reports"),
             ("📅 History", self.show_donation_history, "View donation history"),
             ("⚙️ Settings", self.show_settings, "System settings"),
             ("🚪 Logout", self.logout, "Logout from system")
@@ -4323,7 +4323,7 @@ class ModernBloodBankSystem:
             self.db.rollback()
             messagebox.showerror("Error", str(e))
 
-    def save_donation(self, blood_type, units, donor, notes, window):
+    def save_donation(self, blood_type, units, donor, notes, window, parent_window=None):
         try:
             if not all([blood_type, units, donor]):
                 raise ValueError("Please fill in all required fields")
@@ -4364,7 +4364,11 @@ class ModernBloodBankSystem:
             
             self.db.commit()
             messagebox.showinfo("Success", "Donation recorded successfully!")
+            
+            # Close windows
             window.destroy()
+            if parent_window:
+                parent_window.destroy()
             
             # Refresh dashboard to reflect changes
             self.show_dashboard()
