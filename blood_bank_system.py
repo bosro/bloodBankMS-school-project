@@ -808,9 +808,10 @@ class ModernBloodBankSystem:
         nav_buttons = [
             ("📊 Dashboard", self.show_dashboard, "Home dashboard"),
             ("➕ New Donor", self.show_donor_registration, "Register new donors"),
+            ("👥 Donors", self.show_donors_list, "View and manage donors"), 
             ("📋 Requests", self.show_blood_requests, "Manage blood requests"),
-            ("📈 Analytics", self.show_analytics, "View analytics"),
             ("📄 Reports", self.generate_report, "Generate reports"),
+            ("📈 Analytics", self.show_analytics, "View analytics"),
             ("📅 History", self.show_donation_history, "View donation history"),
             ("⚙️ Settings", self.show_settings, "System settings"),
             ("🚪 Logout", self.logout, "Logout from system")
@@ -1513,8 +1514,7 @@ class ModernBloodBankSystem:
         except Exception as e:
             self.db.rollback()
             messagebox.showerror("Error", str(e))
-        
-        
+              
     def create_blood_type_card(self, parent, blood_type, index):
         card = ttk.Frame(parent, style='Card.TFrame')
         card.grid(row=index//4, column=index%4, padx=10, pady=10, sticky='nsew')
@@ -1697,6 +1697,1125 @@ class ModernBloodBankSystem:
             )
         ).pack(side='right', padx=5)
 
+    def show_donors_list(self):
+        for widget in self.main_container.winfo_children():
+            widget.destroy()
+                
+        main_frame = ttk.Frame(self.main_container, style='Modern.TFrame')
+        main_frame.pack(fill='both', expand=True)
+        
+        # Header with stats
+        header_frame = ttk.Frame(main_frame, style='Modern.TFrame')
+        header_frame.pack(fill='x', pady=(0, 20))
+        
+        # Back button
+        ttk.Button(
+            header_frame,
+            text="← Back to Dashboard",
+            style='Secondary.TButton',
+            command=self.show_dashboard
+        ).pack(side='left', padx=10, pady=5)
+        
+        # Title - Use tk.Label
+        tk.Label(
+            header_frame,
+            text="Donors Registry",
+            font=('Segoe UI', 32, 'bold'),
+            bg=self.colors['bg_dark'],
+            fg=self.colors['text'],
+            pady=20
+        ).pack(side='left', padx=20)
+        
+        # New donor button
+        ttk.Button(
+            header_frame,
+            text="➕ New Donor",
+            style='Modern.TButton',
+            command=self.show_donor_registration
+        ).pack(side='right')
+        
+        # Quick stats
+        self.cursor.execute("""
+            SELECT 
+                COUNT(*) as total,
+                COUNT(DISTINCT blood_group) as blood_types,
+                (SELECT COUNT(*) FROM Donors WHERE DATE(donation_date) = CURDATE()) as today,
+                (SELECT COUNT(*) FROM Donors WHERE donation_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)) as last_30_days
+        """)
+        stats = self.cursor.fetchone()
+        
+        stats_frame = ttk.Frame(main_frame, style='Modern.TFrame')
+        stats_frame.pack(fill='x', pady=(0, 20))
+        
+        stat_items = [
+            ("Total Donors", stats[0], "👥"),
+            ("Blood Types", stats[1], "🩸"),
+            ("Today's Donors", stats[2], "📅", self.colors['success']),
+            ("Last 30 Days", stats[3], "📊", self.colors['accent'])
+        ]
+        
+        for i, (label, value, icon, *colors) in enumerate(stat_items):
+            card = ttk.Frame(stats_frame, style='Card.TFrame')
+            card.grid(row=0, column=i, padx=5, sticky='nsew')
+            
+            color = colors[0] if colors else self.colors['text']
+            
+            # Use tk.Label
+            tk.Label(
+                card,
+                text=f"{icon} {value}",
+                font=('Segoe UI', 20, 'bold'),
+                fg=color,
+                bg=self.colors['card_bg']
+            ).pack(pady=(10, 5))
+            
+            # Use tk.Label
+            tk.Label(
+                card,
+                text=label,
+                font=('Segoe UI', 10),
+                fg=self.colors['text_secondary'],
+                bg=self.colors['card_bg']
+            ).pack(pady=(0, 10))
+        
+        stats_frame.grid_columnconfigure((0,1,2,3), weight=1)
+        
+        # Filters and search
+        filter_frame = self.create_donor_filters(main_frame)
+        filter_frame.pack(fill='x', pady=(0, 20))
+        
+        # Donors list - create in a separate function
+        self.create_donors_list(main_frame)
+
+    def create_donor_filters(self, parent):
+        filter_frame = ttk.Frame(parent, style='Card.TFrame')
+        
+        # Blood group filter
+        blood_frame = ttk.Frame(filter_frame, style='Card.TFrame')
+        blood_frame.pack(side='left', padx=20, pady=10)
+        
+        self.donor_blood_var = tk.StringVar(value='All')
+        
+        # Use tk.Label
+        tk.Label(
+            blood_frame,
+            text="Blood Group:",
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
+        ).pack(side='left', padx=(0, 10))
+        
+        blood_groups = ['All', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
+        blood_combo = ttk.Combobox(
+            blood_frame,
+            textvariable=self.donor_blood_var,
+            values=blood_groups,
+            state='readonly',
+            style='Modern.TCombobox'
+        )
+        blood_combo.pack(side='left')
+        blood_combo.bind('<<ComboboxSelected>>', lambda e: self.refresh_donors_list())
+        
+        # Date filter
+        date_frame = ttk.Frame(filter_frame, style='Card.TFrame')
+        date_frame.pack(side='left', padx=20, pady=10)
+        
+        self.donor_date_var = tk.StringVar(value='All Time')
+        
+        # Use tk.Label
+        tk.Label(
+            date_frame,
+            text="Last Donation:",
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
+        ).pack(side='left', padx=(0, 10))
+        
+        date_options = ['All Time', 'Today', 'Last 7 Days', 'Last 30 Days', 'Last Year']
+        date_combo = ttk.Combobox(
+            date_frame,
+            textvariable=self.donor_date_var,
+            values=date_options,
+            state='readonly',
+            style='Modern.TCombobox'
+        )
+        date_combo.pack(side='left')
+        date_combo.bind('<<ComboboxSelected>>', lambda e: self.refresh_donors_list())
+        
+        # Search
+        search_frame = ttk.Frame(filter_frame, style='Card.TFrame')
+        search_frame.pack(side='right', padx=20, pady=10)
+        
+        self.donor_search_var = tk.StringVar()
+        self.donor_search_var.trace('w', lambda *args: self.refresh_donors_list())
+        
+        search_entry = ttk.Entry(
+            search_frame,
+            textvariable=self.donor_search_var,
+            font=('Segoe UI', 11),
+            width=30,
+            style='Modern.TEntry'
+        )
+        search_entry.pack(side='right')
+        
+        # Use tk.Label
+        tk.Label(
+            search_frame,
+            text="🔍",
+            font=('Segoe UI', 12),
+            bg=self.colors['card_bg']
+        ).pack(side='right', padx=(0, 5))
+        
+        return filter_frame
+
+    def create_donors_list(self, parent):
+        # Create a frame to contain the treeview and scrollbar
+        list_container = ttk.Frame(parent, style='Modern.TFrame')
+        list_container.pack(fill='both', expand=True)
+        
+        # Create Treeview
+        columns = (
+            'id', 'name', 'age', 'blood_group', 'contact', 
+            'email', 'donation_date', 'health_status'
+        )
+        
+        self.donors_tree = ttk.Treeview(
+            list_container,
+            columns=columns,
+            show='headings',
+            style='Treeview'
+        )
+        
+        # Configure columns
+        column_configs = {
+            'id': ('ID', 50),
+            'name': ('Name', 200),
+            'age': ('Age', 50),
+            'blood_group': ('Blood Type', 80),
+            'contact': ('Contact', 150),
+            'email': ('Email', 200),
+            'donation_date': ('Last Donation', 120),
+            'health_status': ('Health Status', 200)
+        }
+        
+        for col, (heading, width) in column_configs.items():
+            self.donors_tree.heading(col, text=heading)
+            self.donors_tree.column(col, width=width)
+        
+        # Add scrollbar
+        y_scrollbar = ttk.Scrollbar(
+            list_container,
+            orient="vertical",
+            command=self.donors_tree.yview
+        )
+        self.donors_tree.configure(yscrollcommand=y_scrollbar.set)
+        
+        # Add horizontal scrollbar
+        x_scrollbar = ttk.Scrollbar(
+            list_container,
+            orient="horizontal",
+            command=self.donors_tree.xview
+        )
+        self.donors_tree.configure(xscrollcommand=x_scrollbar.set)
+        
+        # Pack elements
+        y_scrollbar.pack(side='right', fill='y')
+        x_scrollbar.pack(side='bottom', fill='x')
+        self.donors_tree.pack(side='left', fill='both', expand=True)
+        
+        # Bind double-click event
+        self.donors_tree.bind('<Double-1>', self.show_donor_details)
+        
+        # Bottom action buttons
+        action_frame = ttk.Frame(parent, style='Modern.TFrame')
+        action_frame.pack(fill='x', pady=10)
+        
+        ttk.Button(
+            action_frame,
+            text="🗑️ Delete Selected",
+            style='Secondary.TButton',
+            command=self.delete_selected_donor
+        ).pack(side='left', padx=5)
+        
+        ttk.Button(
+            action_frame,
+            text="📊 Export List",
+            style='Modern.TButton',
+            command=self.export_donors_list
+        ).pack(side='right', padx=5)
+        
+        # Initial load
+        self.refresh_donors_list()
+
+    def refresh_donors_list(self):
+        # Clear existing data
+        for item in self.donors_tree.get_children():
+            self.donors_tree.delete(item)
+        
+        # Get filter values
+        blood_filter = self.donor_blood_var.get()
+        date_filter = self.donor_date_var.get()
+        search_term = self.donor_search_var.get().strip()
+        
+        # Build query
+        query = """
+            SELECT id, name, age, blood_group, contact_info, 
+                email, donation_date, health_status
+            FROM Donors
+            WHERE 1=1
+        """
+        
+        params = []
+        
+        # Apply blood group filter
+        if blood_filter != 'All':
+            query += " AND blood_group = %s"
+            params.append(blood_filter)
+        
+        # Apply date filter
+        if date_filter == 'Today':
+            query += " AND DATE(donation_date) = CURDATE()"
+        elif date_filter == 'Last 7 Days':
+            query += " AND donation_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)"
+        elif date_filter == 'Last 30 Days':
+            query += " AND donation_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)"
+        elif date_filter == 'Last Year':
+            query += " AND donation_date >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)"
+        
+        # Apply search filter
+        if search_term:
+            query += """ AND (
+                name LIKE %s OR
+                contact_info LIKE %s OR
+                email LIKE %s OR
+                health_status LIKE %s
+            )"""
+            search_pattern = f"%{search_term}%"
+            params.extend([search_pattern, search_pattern, search_pattern, search_pattern])
+        
+        # Add ordering
+        query += " ORDER BY donation_date DESC"
+        
+        # Execute query
+        self.cursor.execute(query, params)
+        
+        # Populate treeview
+        for donor in self.cursor.fetchall():
+            # Format date for display
+            donor_values = list(donor)
+            if donor[6]:  # donation_date
+                donor_values[6] = donor[6].strftime("%Y-%m-%d")
+            else:
+                donor_values[6] = "Never"
+                
+            self.donors_tree.insert('', 'end', values=donor_values)
+
+    def show_donor_details(self, event):
+        try:
+            # Get selected item
+            selection = self.donors_tree.selection()[0]
+            values = self.donors_tree.item(selection, 'values')
+            
+            if not values:
+                return
+            
+            donor_id = values[0]
+            
+            # Create details window
+            details_window = tk.Toplevel(self.root)
+            details_window.title(f"Donor Details - {values[1]}")
+            details_window.geometry("600x700")
+            details_window.configure(bg=self.colors['bg_dark'])
+            
+            # Create a scrollable frame for the content
+            main_canvas = tk.Canvas(details_window, bg=self.colors['bg_dark'], highlightthickness=0)
+            main_scrollbar = ttk.Scrollbar(details_window, orient="vertical", command=main_canvas.yview)
+            
+            # Create a frame inside the canvas for the content
+            main_frame = ttk.Frame(main_canvas, style='Modern.TFrame')
+            
+            # Configure the canvas
+            main_canvas.configure(yscrollcommand=main_scrollbar.set)
+            main_canvas.pack(side='left', fill='both', expand=True, padx=20, pady=20)
+            main_scrollbar.pack(side='right', fill='y')
+            
+            # Add the main frame to the canvas
+            main_canvas_frame = main_canvas.create_window((0, 0), window=main_frame, anchor='nw')
+            
+            # Make sure the frame takes the full width of the canvas
+            def configure_frame(event):
+                main_canvas.itemconfig(main_canvas_frame, width=event.width)
+            main_canvas.bind('<Configure>', configure_frame)
+            
+            # Make sure the canvas can scroll the entire frame
+            def configure_scroll_region(event):
+                main_canvas.configure(scrollregion=main_canvas.bbox('all'))
+            main_frame.bind('<Configure>', configure_scroll_region)
+            
+            # Header
+            tk.Label(
+                main_frame,
+                text=f"Donor Details",
+                font=('Segoe UI', 24, 'bold'),
+                bg=self.colors['bg_dark'],
+                fg=self.colors['text'],
+                pady=10
+            ).pack(fill='x')
+            
+            # Get donor's full details and donation history
+            self.cursor.execute("""
+                SELECT d.*, 
+                    (SELECT COUNT(*) FROM DonationSchedule WHERE donor_id = d.id) as donation_count
+                FROM Donors d
+                WHERE d.id = %s
+            """, (donor_id,))
+            
+            donor = self.cursor.fetchone()
+            
+            if not donor:
+                tk.Label(
+                    main_frame,
+                    text="Donor not found",
+                    fg=self.colors['error'],
+                    bg=self.colors['bg_dark']
+                ).pack()
+                return
+            
+            # Personal Info Card
+            self.create_donor_personal_card(main_frame, donor)
+            
+            # Donation History Card
+            self.create_donor_history_card(main_frame, donor_id)
+            
+            # Action buttons
+            button_frame = ttk.Frame(main_frame, style='Modern.TFrame')
+            button_frame.pack(fill='x', pady=20)
+            
+            ttk.Button(
+                button_frame,
+                text="✏️ Edit Donor",
+                style='Modern.TButton',
+                command=lambda: self.show_edit_donor_form(donor_id, details_window)
+            ).pack(side='left', padx=5)
+            
+            ttk.Button(
+                button_frame,
+                text="🩸 Record Donation",
+                style='Modern.TButton',
+                command=lambda: self.show_donation_form(donor[3], donor_id, details_window)
+            ).pack(side='left', padx=5)
+            
+            ttk.Button(
+                button_frame,
+                text="🖨️ Print Details",
+                style='Secondary.TButton',
+                command=lambda: self.print_donor_details(donor_id)
+            ).pack(side='right', padx=5)
+            
+            ttk.Button(
+                button_frame,
+                text="Close",
+                style='Secondary.TButton',
+                command=details_window.destroy
+            ).pack(side='right', padx=5)
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to show donor details: {str(e)}")
+
+    def create_donor_personal_card(self, parent, donor):
+        card = ttk.Frame(parent, style='Card.TFrame')
+        card.pack(fill='x', pady=10)
+        
+        # Card Header
+        tk.Label(
+            card,
+            text="Personal Information",
+            font=('Segoe UI', 18, 'bold'),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text'],
+            pady=10
+        ).pack(fill='x', padx=20)
+        
+        # Donor details
+        details = [
+            ("ID", donor[0]),
+            ("Name", donor[1]),
+            ("Age", donor[2]),
+            ("Blood Group", donor[3]),
+            ("Contact", donor[4]),
+            ("Email", donor[5] if donor[5] else "N/A"),
+            ("Address", donor[6] if donor[6] else "N/A"),
+            ("Last Donation", donor[7].strftime("%Y-%m-%d") if donor[7] else "Never"),
+            ("Health Status", donor[8] if donor[8] else "N/A"),
+            ("Registration Date", donor[9].strftime("%Y-%m-%d %H:%M") if donor[9] else "N/A"),
+            ("Total Donations", donor[10])
+        ]
+        
+        for label, value in details:
+            detail_frame = ttk.Frame(card, style='Card.TFrame')
+            detail_frame.pack(fill='x', padx=20, pady=5)
+            
+            tk.Label(
+                detail_frame,
+                text=f"{label}:",
+                font=('Segoe UI', 14, 'bold'),
+                bg=self.colors['card_bg'],
+                fg=self.colors['text'],
+                width=15,
+                anchor='w'
+            ).pack(side='left', padx=(0, 10))
+            
+            tk.Label(
+                detail_frame,
+                text=str(value),
+                font=('Segoe UI', 14),
+                bg=self.colors['card_bg'],
+                fg=self.colors['text_secondary'],
+                anchor='w'
+            ).pack(side='left', fill='x', expand=True)
+
+    def create_donor_history_card(self, parent, donor_id):
+        card = ttk.Frame(parent, style='Card.TFrame')
+        card.pack(fill='x', pady=10)
+        
+        # Card Header
+        tk.Label(
+            card,
+            text="Donation History",
+            font=('Segoe UI', 18, 'bold'),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text'],
+            pady=10
+        ).pack(fill='x', padx=20)
+        
+        # Fetch donation history
+        self.cursor.execute("""
+            SELECT scheduled_date, time_slot, status, notes
+            FROM DonationSchedule
+            WHERE donor_id = %s
+            ORDER BY scheduled_date DESC
+        """, (donor_id,))
+        
+        history = self.cursor.fetchall()
+        
+        if not history:
+            tk.Label(
+                card,
+                text="No donation history found",
+                font=('Segoe UI', 14),
+                bg=self.colors['card_bg'],
+                fg=self.colors['text_secondary'],
+                pady=10
+            ).pack(fill='x', padx=20)
+            return
+        
+        # Create a small treeview for history
+        history_frame = ttk.Frame(card, style='Card.TFrame')
+        history_frame.pack(fill='x', padx=20, pady=10)
+        
+        columns = ('date', 'time', 'status', 'notes')
+        history_tree = ttk.Treeview(
+            history_frame,
+            columns=columns,
+            show='headings',
+            height=5  # Show only 5 rows to keep it compact
+        )
+        
+        # Column configurations
+        history_tree.heading('date', text='Date')
+        history_tree.heading('time', text='Time Slot')
+        history_tree.heading('status', text='Status')
+        history_tree.heading('notes', text='Notes')
+        
+        history_tree.column('date', width=100)
+        history_tree.column('time', width=150)
+        history_tree.column('status', width=100)
+        history_tree.column('notes', width=200)
+        
+        # Add scrollbar
+        scrollbar = ttk.Scrollbar(
+            history_frame,
+            orient="vertical",
+            command=history_tree.yview
+        )
+        history_tree.configure(yscrollcommand=scrollbar.set)
+        
+        # Pack elements
+        history_tree.pack(side='left', fill='x', expand=True)
+        scrollbar.pack(side='right', fill='y')
+        
+        # Populate with history
+        for entry in history:
+            date_str = entry[0].strftime("%Y-%m-%d") if entry[0] else "N/A"
+            time_slot = entry[1] if entry[1] else "N/A"
+            status = entry[2] if entry[2] else "N/A"
+            notes = entry[3] if entry[3] else ""
+            
+            history_tree.insert('', 'end', values=(date_str, time_slot, status, notes))
+
+    def delete_selected_donor(self):
+        # Get selected donor
+        selection = self.donors_tree.selection()
+        if not selection:
+            messagebox.showinfo("Selection", "Please select a donor to delete")
+            return
+        
+        donor_id = self.donors_tree.item(selection[0], 'values')[0]
+        donor_name = self.donors_tree.item(selection[0], 'values')[1]
+        
+        # Confirm deletion
+        confirm = messagebox.askyesno(
+            "Confirm Deletion", 
+            f"Are you sure you want to delete donor '{donor_name}'?\n\nThis will also delete all donation history for this donor."
+        )
+        
+        if not confirm:
+            return
+        
+        try:
+            # Begin transaction
+            self.cursor.execute("START TRANSACTION")
+            
+            # Delete donation schedule entries first (foreign key constraint)
+            self.cursor.execute(
+                "DELETE FROM DonationSchedule WHERE donor_id = %s",
+                (donor_id,)
+            )
+            
+            # Delete donor
+            self.cursor.execute(
+                "DELETE FROM Donors WHERE id = %s",
+                (donor_id,)
+            )
+            
+            self.db.commit()
+            messagebox.showinfo("Success", f"Donor '{donor_name}' deleted successfully")
+            
+            # Refresh the list
+            self.refresh_donors_list()
+            
+        except Exception as e:
+            self.db.rollback()
+            messagebox.showerror("Error", f"Failed to delete donor: {str(e)}")
+
+    def export_donors_list(self):
+        try:
+            # Create reports directory if it doesn't exist
+            reports_dir = "reports"
+            if not os.path.exists(reports_dir):
+                os.makedirs(reports_dir)
+            
+            # Generate filename
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = os.path.join(reports_dir, f"donors_list_{timestamp}.csv")
+            
+            # Get filtered data from tree
+            with open(filename, 'w', newline='') as file:
+                file.write("ID,Name,Age,Blood Group,Contact,Email,Last Donation,Health Status\n")
+                
+                for item_id in self.donors_tree.get_children():
+                    values = self.donors_tree.item(item_id, 'values')
+                    # Escape quotes in values
+                    escaped_values = [f'"{str(v).replace(chr(34), chr(34)+chr(34))}"' for v in values]
+                    file.write(','.join(escaped_values) + '\n')
+            
+            # Open the file
+            os.startfile(filename) if os.name == 'nt' else os.system(f'open "{filename}"')
+            
+            messagebox.showinfo("Export Successful", f"Donors list exported to {filename}")
+        
+        except Exception as e:
+            messagebox.showerror("Export Error", f"Failed to export donors list: {str(e)}")
+        
+    def print_donor_details(self, donor_id):
+        try:
+            # Create reports directory if it doesn't exist
+            reports_dir = "reports"
+            if not os.path.exists(reports_dir):
+                os.makedirs(reports_dir)
+                
+            # Generate filename
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = os.path.join(reports_dir, f"donor_{donor_id}_{timestamp}.txt")
+            
+            # Fetch donor details
+            self.cursor.execute("""
+                SELECT d.*, 
+                    (SELECT COUNT(*) FROM DonationSchedule WHERE donor_id = d.id) as donation_count
+                FROM Donors d
+                WHERE d.id = %s
+            """, (donor_id,))
+            
+            donor = self.cursor.fetchone()
+            
+            if not donor:
+                messagebox.showerror("Error", "Donor not found")
+                return
+                
+            # Write to file
+            with open(filename, 'w') as file:
+                file.write("=========================================\n")
+                file.write("          BLOOD BANK DONOR DETAILS       \n")
+                file.write("=========================================\n\n")
+                
+                file.write(f"Donor ID: {donor[0]}\n")
+                file.write(f"Name: {donor[1]}\n")
+                file.write(f"Age: {donor[2]}\n")
+                file.write(f"Blood Group: {donor[3]}\n")
+                file.write(f"Contact: {donor[4]}\n")
+                file.write(f"Email: {donor[5] if donor[5] else 'N/A'}\n")
+                file.write(f"Address: {donor[6] if donor[6] else 'N/A'}\n")
+                file.write(f"Last Donation: {donor[7].strftime('%Y-%m-%d') if donor[7] else 'Never'}\n")
+                file.write(f"Health Status: {donor[8] if donor[8] else 'N/A'}\n")
+                file.write(f"Registration Date: {donor[9].strftime('%Y-%m-%d %H:%M') if donor[9] else 'N/A'}\n")
+                file.write(f"Total Donations: {donor[10]}\n\n")
+                
+                # Fetch donation history
+                self.cursor.execute("""
+                    SELECT scheduled_date, time_slot, status, notes
+                    FROM DonationSchedule
+                    WHERE donor_id = %s
+                    ORDER BY scheduled_date DESC
+                """, (donor_id,))
+                
+                history = self.cursor.fetchall()
+                
+                file.write("-----------------------------------------\n")
+                file.write("             DONATION HISTORY            \n")
+                file.write("-----------------------------------------\n\n")
+                
+                if not history:
+                    file.write("No donation history found.\n")
+                else:
+                    for i, entry in enumerate(history, 1):
+                        date_str = entry[0].strftime("%Y-%m-%d") if entry[0] else "N/A"
+                        time_slot = entry[1] if entry[1] else "N/A"
+                        status = entry[2] if entry[2] else "N/A"
+                        notes = entry[3] if entry[3] else "None"
+                        
+                        file.write(f"Donation #{i}:\n")
+                        file.write(f"  Date: {date_str}\n")
+                        file.write(f"  Time Slot: {time_slot}\n")
+                        file.write(f"  Status: {status}\n")
+                        file.write(f"  Notes: {notes}\n")
+                        file.write("\n")
+                
+                file.write("=========================================\n")
+                file.write(f"Printed on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                file.write("=========================================\n")
+            
+            # Open the file
+            os.startfile(filename) if os.name == 'nt' else os.system(f'open "{filename}"')
+            
+            messagebox.showinfo("Print", f"Donor details printed to {filename}")
+            
+        except Exception as e:
+            messagebox.showerror("Print Error", f"Failed to print donor details: {str(e)}")
+
+    def show_edit_donor_form(self, donor_id, parent_window=None):
+        # Fetch donor information
+        self.cursor.execute("""
+            SELECT * FROM Donors WHERE id = %s
+        """, (donor_id,))
+        donor = self.cursor.fetchone()
+        
+        if not donor:
+            messagebox.showerror("Error", "Donor not found")
+            return
+        
+        edit_window = tk.Toplevel(self.root)
+        edit_window.title("Edit Donor")
+        edit_window.geometry("800x800")
+        edit_window.configure(bg=self.colors['bg_dark'])
+        
+        # Create a scrollable frame for the content
+        main_canvas = tk.Canvas(edit_window, bg=self.colors['bg_dark'], highlightthickness=0)
+        main_scrollbar = ttk.Scrollbar(edit_window, orient="vertical", command=main_canvas.yview)
+        
+        # Pack the canvas and scrollbar
+        main_canvas.pack(side='left', fill='both', expand=True)
+        main_scrollbar.pack(side='right', fill='y')
+        
+        # Configure the canvas
+        main_canvas.configure(yscrollcommand=main_scrollbar.set)
+        
+        # Create a frame inside the canvas for the content
+        main_frame = ttk.Frame(main_canvas, style='Modern.TFrame')
+        
+        # Add the main frame to the canvas
+        main_canvas_frame = main_canvas.create_window((0, 0), window=main_frame, anchor='nw')
+        
+        # Make sure the frame takes the full width of the canvas
+        def configure_frame(event):
+            main_canvas.itemconfig(main_canvas_frame, width=event.width)
+        main_canvas.bind('<Configure>', configure_frame)
+        
+        # Make sure the canvas can scroll the entire frame
+        def configure_scroll_region(event):
+            main_canvas.configure(scrollregion=main_canvas.bbox('all'))
+        main_frame.bind('<Configure>', configure_scroll_region)
+        
+        # Header
+        tk.Label(
+            main_frame,
+            text=f"Edit Donor",
+            font=('Segoe UI', 24, 'bold'),
+            bg=self.colors['bg_dark'],
+            fg=self.colors['text'],
+            pady=10
+        ).pack(fill='x', padx=20)
+        
+        # Form container with padding
+        form_frame = ttk.Frame(main_frame, style='Card.TFrame')
+        form_frame.pack(fill='x', padx=20, pady=10)
+        
+        # Form fields with pre-populated data
+        fields = [
+            ("Name*", "name", "text", donor[1]),
+            ("Age*", "age", "number", str(donor[2])),
+            ("Blood Group*", "blood_group", "combo", ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'], donor[3]),
+            ("Contact Number*", "contact", "text", donor[4]),
+            ("Email", "email", "text", donor[5] if donor[5] else ""),
+            ("Address", "address", "text", donor[6] if donor[6] else ""),
+            ("Health Status", "health_status", "text", donor[8] if donor[8] else "")
+        ]
+        
+        entries = {}
+        
+        for label_text, key, field_type, default, *args in fields:
+            field_frame = ttk.Frame(form_frame, style='Card.TFrame')
+            field_frame.pack(fill='x', pady=10, padx=20)
+            
+            tk.Label(
+                field_frame,
+                text=label_text,
+                font=('Segoe UI', 16),
+                bg=self.colors['card_bg'],
+                fg=self.colors['text_secondary'],
+                pady=10
+            ).pack(anchor='w')
+            
+            if field_type == "combo":
+                entry = ttk.Combobox(
+                    field_frame,
+                    values=args[0],
+                    state='readonly',
+                    font=('Segoe UI', 11)
+                )
+                entry.set(default)
+            elif field_type == "text":
+                entry = ttk.Entry(
+                    field_frame,
+                    font=('Segoe UI', 11),
+                    style='Modern.TEntry'
+                )
+                entry.insert(0, default)
+            elif field_type == "number":
+                entry = ttk.Entry(
+                    field_frame,
+                    font=('Segoe UI', 11),
+                    style='Modern.TEntry'
+                )
+                entry.insert(0, default)
+            
+            entry.pack(fill='x', pady=(5, 0))
+            entries[key] = entry
+        
+        # Buttons at the bottom of the form
+        button_frame = ttk.Frame(main_frame, style='Modern.TFrame')
+        button_frame.pack(fill='x', pady=20, padx=20)
+        
+        ttk.Button(
+            button_frame,
+            text="Cancel",
+            style='Secondary.TButton',
+            command=edit_window.destroy
+        ).pack(side='left', padx=5)
+        
+        ttk.Button(
+            button_frame,
+            text="Save Changes",
+            style='Modern.TButton',
+            command=lambda: self.update_donor(
+                donor_id,
+                entries,
+                edit_window,
+                parent_window
+            )
+        ).pack(side='right', padx=5)
+        
+        # Ensure buttons are visible by scrolling to the bottom
+        edit_window.update_idletasks()
+        main_canvas.yview_moveto(0.0)  # Scroll to top after loading
+
+    def update_donor(self, donor_id, entries, edit_window, parent_window=None):
+        try:
+            # Validate required fields
+            name = entries['name'].get().strip()
+            age = entries['age'].get().strip()
+            blood_group = entries['blood_group'].get()
+            contact = entries['contact'].get().strip()
+            email = entries['email'].get().strip()
+            address = entries['address'].get().strip()
+            health_status = entries['health_status'].get().strip()
+            
+            if not all([name, age, blood_group, contact]):
+                raise ValueError("Please fill in all required fields")
+            
+            try:
+                age = int(age)
+                if age < 18 or age > 65:
+                    raise ValueError("Age must be between 18 and 65")
+            except ValueError:
+                raise ValueError("Please enter a valid age")
+            
+            if email and not self.validate_email(email):
+                raise ValueError("Please enter a valid email address")
+            
+            # Update donor in database
+            self.cursor.execute("""
+                UPDATE Donors
+                SET name = %s, age = %s, blood_group = %s, contact_info = %s,
+                    email = %s, address = %s, health_status = %s
+                WHERE id = %s
+            """, (name, age, blood_group, contact, email, address, health_status, donor_id))
+            
+            self.db.commit()
+            messagebox.showinfo("Success", "Donor information updated successfully")
+            
+            # Close the edit window
+            edit_window.destroy()
+            
+            # Close the parent window if provided
+            if parent_window:
+                parent_window.destroy()
+            
+            # Refresh the donors list if it's open
+            if hasattr(self, 'donors_tree'):
+                self.refresh_donors_list()
+            
+        except Exception as e:
+            self.db.rollback()
+            messagebox.showerror("Error", str(e))
+
+    # Function to show donation form with pre-selected donor
+    def show_donation_form(self, blood_type=None, donor_id=None, parent_window=None):
+        donation_window = tk.Toplevel(self.root)
+        donation_window.title("New Blood Donation")
+        donation_window.geometry("600x800")
+        donation_window.configure(bg=self.colors['bg_dark'])
+        
+        # Create a scrollable frame for the content
+        main_canvas = tk.Canvas(donation_window, bg=self.colors['bg_dark'], highlightthickness=0)
+        main_scrollbar = ttk.Scrollbar(donation_window, orient="vertical", command=main_canvas.yview)
+        
+        # Pack the canvas and scrollbar
+        main_canvas.pack(side='left', fill='both', expand=True)
+        main_scrollbar.pack(side='right', fill='y')
+        
+        # Configure the canvas
+        main_canvas.configure(yscrollcommand=main_scrollbar.set)
+        
+        # Create a frame inside the canvas for the content
+        main_frame = ttk.Frame(main_canvas, style='Modern.TFrame')
+        main_frame.pack(fill='both', expand=True, padx=30, pady=30)
+        
+        # Add the main frame to the canvas
+        main_canvas_frame = main_canvas.create_window((0, 0), window=main_frame, anchor='nw')
+        
+        # Make sure the frame takes the full width of the canvas
+        def configure_frame(event):
+            main_canvas.itemconfig(main_canvas_frame, width=event.width)
+        main_canvas.bind('<Configure>', configure_frame)
+        
+        # Make sure the canvas can scroll the entire frame
+        def configure_scroll_region(event):
+            main_canvas.configure(scrollregion=main_canvas.bbox('all'))
+        main_frame.bind('<Configure>', configure_scroll_region)
+        
+        # Header frame
+        header_frame = ttk.Frame(main_frame, style='Modern.TFrame')
+        header_frame.pack(fill='x', pady=(0, 20))
+        
+        # Back button
+        ttk.Button(
+            header_frame,
+            text="← Back",
+            style='Secondary.TButton',
+            command=donation_window.destroy
+        ).pack(side='left', pady=5, padx=5)
+        
+        # Header - Use tk.Label
+        tk.Label(
+            header_frame,
+            text="New Blood Donation",
+            font=('Segoe UI', 32, 'bold'),
+            bg=self.colors['bg_dark'],
+            fg=self.colors['text'],
+            pady=20
+        ).pack(side='left', padx=20)
+        
+        # Form
+        form_frame = ttk.Frame(main_frame, style='Card.TFrame')
+        form_frame.pack(fill='x', pady=10)
+        
+        # Blood type selection
+        blood_type_frame = ttk.Frame(form_frame, style='Card.TFrame')
+        blood_type_frame.pack(fill='x', padx=20, pady=10)
+        
+        # Use tk.Label
+        tk.Label(
+            blood_type_frame,
+            text="Blood Type*",
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
+        ).pack(anchor='w')
+        
+        blood_type_var = tk.StringVar(value=blood_type if blood_type else '')
+        blood_type_combo = ttk.Combobox(
+            blood_type_frame,
+            textvariable=blood_type_var,
+            values=['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
+            state='readonly' if blood_type else 'normal',
+            style='Modern.TCombobox'
+        )
+        blood_type_combo.pack(fill='x', pady=(5, 0))
+        
+        # Units
+        units_frame = ttk.Frame(form_frame, style='Card.TFrame')
+        units_frame.pack(fill='x', padx=20, pady=10)
+        
+        # Use tk.Label
+        tk.Label(
+            units_frame,
+            text="Units*",
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
+        ).pack(anchor='w')
+        
+        units_var = tk.StringVar(value="1")  # Default to 1 unit
+        units_entry = ttk.Entry(
+            units_frame,
+            textvariable=units_var,
+            style='Modern.TEntry'
+        )
+        units_entry.pack(fill='x', pady=(5, 0))
+        
+        # Donor Information
+        donor_frame = ttk.Frame(form_frame, style='Card.TFrame')
+        donor_frame.pack(fill='x', padx=20, pady=10)
+        
+        # Use tk.Label
+        tk.Label(
+            donor_frame,
+            text="Donor Selection",
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
+        ).pack(anchor='w')
+        
+        donor_var = tk.StringVar()
+        
+        # If donor_id is provided, select that donor
+        if donor_id:
+            self.cursor.execute(
+                "SELECT id, name FROM Donors WHERE id = %s",
+                (donor_id,)
+            )
+            selected_donor = self.cursor.fetchone()
+            if selected_donor:
+                donor_var.set(f"{selected_donor[0]} - {selected_donor[1]}")
+        
+        # Get list of donors matching blood type if specified
+        filter_clause = ""
+        filter_params = []
+        
+        if blood_type:
+            filter_clause = "WHERE blood_group = %s"
+            filter_params.append(blood_type)
+        
+        self.cursor.execute(
+            f"SELECT id, name FROM Donors {filter_clause} ORDER BY name",
+            filter_params
+        )
+        donors = self.cursor.fetchall()
+        donor_list = [f"{d[0]} - {d[1]}" for d in donors]
+        
+        donor_combo = ttk.Combobox(
+            donor_frame,
+            textvariable=donor_var,
+            values=donor_list,
+            style='Modern.TCombobox'
+        )
+        donor_combo.pack(fill='x', pady=(5, 0))
+        
+        ttk.Button(
+            donor_frame,
+            text="➕ Add New Donor",
+            style='Secondary.TButton',
+            command=self.show_donor_registration
+        ).pack(fill='x', pady=(10, 0))
+        
+        # Notes
+        notes_frame = ttk.Frame(form_frame, style='Card.TFrame')
+        notes_frame.pack(fill='x', padx=20, pady=10)
+        
+        # Use tk.Label
+        tk.Label(
+            notes_frame,
+            text="Additional Notes",
+            font=('Segoe UI', 16),
+            bg=self.colors['card_bg'],
+            fg=self.colors['text_secondary'],
+            pady=10
+        ).pack(anchor='w')
+        
+        notes_text = tk.Text(
+            notes_frame,
+            height=4,
+            font=('Segoe UI', 11),
+            bg=self.colors['bg_light'],
+            fg=self.colors['text'],
+            insertbackground=self.colors['text']
+        )
+        notes_text.pack(fill='x', pady=(5, 0))
+        
+        # Action buttons
+        button_frame = ttk.Frame(main_frame, style='Modern.TFrame')
+        button_frame.pack(fill='x', pady=20)
+        
+        ttk.Button(
+            button_frame,
+            text="Cancel",
+            style='Secondary.TButton',
+            command=donation_window.destroy
+        ).pack(side='left', padx=5)
+        
+        ttk.Button(
+            button_frame,
+            text="Save Donation",
+            style='Modern.TButton',
+            command=lambda: self.save_donation(
+                blood_type_var.get(),
+                units_var.get(),
+                donor_var.get(),
+                notes_text.get("1.0", tk.END).strip(),
+                donation_window,
+                parent_window
+            )
+        ).pack(side='right', padx=5)
+        
+        # Ensure buttons are visible by scrolling to the bottom
+        donation_window.update_idletasks()
+        main_canvas.yview_moveto(0.0)  # Scroll to top after loading
+
     def create_personal_info_tab(self, parent):
         frame = ttk.Frame(parent, style='Card.TFrame')
         frame.pack(fill='both', expand=True, padx=20, pady=20)
@@ -1843,7 +2962,6 @@ class ModernBloodBankSystem:
         self.health_notes.pack(fill='x', pady=(5, 0))
         
         return frame
-
 
     def create_scheduling_tab(self, parent):
         frame = ttk.Frame(parent, style='Card.TFrame')
@@ -2554,8 +3672,59 @@ class ModernBloodBankSystem:
             messagebox.showerror("Error", f"Failed to update request: {str(e)}")
             
     def print_request(self, request_id):
-        # Implement printing functionality
-        messagebox.showinfo("Print", "Printing request details...")
+        try:
+            # Create reports directory if it doesn't exist
+            reports_dir = "reports"
+            if not os.path.exists(reports_dir):
+                os.makedirs(reports_dir)
+                
+            # Generate filename
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = os.path.join(reports_dir, f"request_{request_id}_{timestamp}.txt")
+            
+            # Fetch request details
+            self.cursor.execute("""
+                SELECT r.*, b.units_available
+                FROM Requests r
+                LEFT JOIN BloodBank b ON r.blood_group = b.blood_group
+                WHERE r.id = %s
+            """, (request_id,))
+            
+            request = self.cursor.fetchone()
+            
+            if not request:
+                messagebox.showerror("Error", "Request not found")
+                return
+                
+            # Write to file
+            with open(filename, 'w') as file:
+                file.write("=========================================\n")
+                file.write("        BLOOD BANK REQUEST DETAILS       \n")
+                file.write("=========================================\n\n")
+                
+                file.write(f"Request ID: {request_id}\n")
+                file.write(f"Hospital: {request[1]}\n")
+                file.write(f"Blood Group: {request[2]}\n")
+                file.write(f"Units Requested: {request[3]}\n")
+                file.write(f"Request Date: {request[4].strftime('%Y-%m-%d')}\n")
+                file.write(f"Priority: {request[5]}\n")
+                file.write(f"Status: {request[6]}\n")
+                
+                if request[7]:  # Notes
+                    file.write(f"\nNotes:\n{request[7]}\n")
+                    
+                file.write("\n-----------------------------------------\n")
+                file.write(f"Current Inventory for {request[2]}: {request[8]} units\n")
+                file.write(f"Printed on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                file.write("=========================================\n")
+            
+            # Open the file
+            os.startfile(filename) if os.name == 'nt' else os.system(f'open "{filename}"')
+            
+            messagebox.showinfo("Print", f"Request details printed to {filename}")
+            
+        except Exception as e:
+            messagebox.showerror("Print Error", f"Failed to print request: {str(e)}")
         
     def show_analytics(self):
         for widget in self.main_container.winfo_children():
@@ -2828,9 +3997,8 @@ class ModernBloodBankSystem:
         else:  # Last Year
             return today - timedelta(days=365)
 
-   
     def show_edit_request_form(self, request_id, parent_window):
-    # Fetch the current request data
+        # Fetch the current request data
         self.cursor.execute("""
             SELECT * FROM Requests WHERE id = %s
         """, (request_id,))
@@ -2841,8 +4009,32 @@ class ModernBloodBankSystem:
         edit_window.geometry("600x700")
         edit_window.configure(bg=self.colors['bg_dark'])
         
-        main_frame = ttk.Frame(edit_window, style='Modern.TFrame')
-        main_frame.pack(fill='both', expand=True, padx=30, pady=30)
+        # Create a scrollable canvas
+        main_canvas = tk.Canvas(edit_window, bg=self.colors['bg_dark'], highlightthickness=0)
+        main_scrollbar = ttk.Scrollbar(edit_window, orient="vertical", command=main_canvas.yview)
+        
+        # Pack the canvas and scrollbar
+        main_canvas.pack(side='left', fill='both', expand=True)
+        main_scrollbar.pack(side='right', fill='y')
+        
+        # Configure the canvas
+        main_canvas.configure(yscrollcommand=main_scrollbar.set)
+        
+        # Create a frame inside the canvas for the content
+        main_frame = ttk.Frame(main_canvas, style='Modern.TFrame')
+        
+        # Add the main frame to the canvas
+        main_canvas_frame = main_canvas.create_window((0, 0), window=main_frame, anchor='nw')
+        
+        # Make sure the frame takes the full width of the canvas
+        def configure_frame(event):
+            main_canvas.itemconfig(main_canvas_frame, width=event.width)
+        main_canvas.bind('<Configure>', configure_frame)
+        
+        # Make sure the canvas can scroll the entire frame
+        def configure_scroll_region(event):
+            main_canvas.configure(scrollregion=main_canvas.bbox('all'))
+        main_frame.bind('<Configure>', configure_scroll_region)
         
         # Header frame
         header_frame = ttk.Frame(main_frame, style='Modern.TFrame')
@@ -3036,7 +4228,10 @@ class ModernBloodBankSystem:
                 parent_window
             )
         ).pack(side='right', padx=5)
-
+        
+        # Ensure buttons are visible by scrolling to the top
+        edit_window.update_idletasks()
+        main_canvas.yview_moveto(0.0)  # Start scrolled to the top
 
     def update_request(self, request_id, hospital, blood_type, units, priority, status, notes, edit_window, parent_window=None):
         try:
@@ -3127,7 +4322,6 @@ class ModernBloodBankSystem:
         except Exception as e:
             self.db.rollback()
             messagebox.showerror("Error", str(e))
-
 
     def save_donation(self, blood_type, units, donor, notes, window):
         try:
@@ -3254,7 +4448,6 @@ class ModernBloodBankSystem:
         self.create_blood_type_distribution_chart(charts_frame, 0, 1)
         self.create_request_status_chart(charts_frame, 1, 0)
         self.create_inventory_levels_chart(charts_frame, 1, 1)
-
 
     def show_settings(self):
         settings_window = tk.Toplevel(self.root)
@@ -4113,7 +5306,6 @@ class ModernBloodBankSystem:
                 report_var.get()
             )
         ).pack(side='right', padx=5)
-
 
     def show_add_user_form(self):
         user_window = tk.Toplevel(self.root)
